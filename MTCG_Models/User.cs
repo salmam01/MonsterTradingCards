@@ -5,16 +5,6 @@ namespace MTCG_Model
 {
     public class User
     {
-        public User(string username, string password)
-        {
-            this._username = username;
-            this._password = password;
-            this._elo = 100;
-            this._coins = 20;
-            this._stack = new List<Card>();
-            this._deck = new Card[4];
-        }
-
         private string _username;
         private string _password;
         private int _coins;
@@ -25,6 +15,16 @@ namespace MTCG_Model
         //  Selected cards for battle by user
         private Card[] _deck = new Card[4];
 
+
+        public User(string username, string password)
+        {
+            this._username = username;
+            this._password = password;
+            this._elo = 100;
+            this._coins = 20;
+            this._stack = new List<Card>();
+            this._deck = new Card[4];
+        }
 
         public string GetUsername { get { return _username; } }
         public string GetPassword { get { return _password; } }
