@@ -38,21 +38,21 @@ namespace MTCG_Model
             this.stack.Add(card);
         }*/
 
-        public bool Login(string username, string password)
+        public int Login(string username, string password, StreamWriter writer)
         {
             if (username == null || password == null)
             {
-                Console.WriteLine("Username or password cannot be empty!");
-                return false;
+                writer.WriteLine("Username or password cannot be empty!");
+                return 400;
             }
             if (username == this._username && password == this._password)
             {
-                Console.WriteLine("Login successful!");
-                return true;
+                writer.WriteLine("Login successful!");
+                return 200;
             }
 
-            Console.WriteLine("Credentials do not match!");
-            return false;
+            writer.WriteLine("Credentials do not match!");
+            return 401;
         }
 
         public bool IsDeckFree()
@@ -124,10 +124,5 @@ namespace MTCG_Model
                 Console.WriteLine((i + 1) + ". " + this._stack[i]);
             }
         }
-
-        /*public void Attack(User enemy)
-        {
-           
-        }*/
     }
 }

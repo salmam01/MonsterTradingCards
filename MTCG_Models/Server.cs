@@ -26,13 +26,11 @@ namespace MTCG_Models
             try
             {
                 _listener.Start();
-                Console.WriteLine("Listening...");
-
+                Console.WriteLine("Waiting for a connection...");
                 while (true)
                 {
-                    Console.WriteLine("Waiting for a connection...");
                     using TcpClient client = _listener.AcceptTcpClient();
-                    Console.WriteLine("Connected!");
+                    Console.WriteLine("New client connected!");
 
                     //  Pass handling the client requests to the function
                     RequestHandler(client);
@@ -70,7 +68,7 @@ namespace MTCG_Models
                     // Translate data bytes to an ASCII string.
                     request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
                     Console.WriteLine($"Received: {request}");
-                    ParseRequest(request, writer);      
+                    ParseRequest(writer, request);      
                     
                     //  Output response
                     writer.Flush();
@@ -82,30 +80,50 @@ namespace MTCG_Models
             }
             finally
             {
+                Console.WriteLine("Connection closed.");
                 client.Close();
             }
         }
 
-        public void ParseRequest(string request, StreamWriter writer)
+        public void ParseRequest(StreamWriter writer, string request)
         {
-            //  Split the string by each line
-            string[] requestLines = request.Split("\r\n");
-
-            // First line of the HTTP request contains the method, path, and HTTP version
-            string[] header = requestLines[0].Split(" ");
-            string[] secondLine = requestLines[1].Split(" ");
-
-            if (requestLines.Length > 2)
+            //  Split the request string by each line
+            string[] lines = request.Split("\r\n");
+            if (lines.Length == 0)
             {
-                string[] body = requestLines[2].Split(" ");
+                Console.WriteLine("Invalid HTTP Request.");
+                HTTPResponse(writer, 400);
+                return;
             }
 
-            string method = header[0];
-            string path = header[1];
-            Router(method, path, writer);
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+
+            // First line of the HTTP request contains the HTTP version, method and path
+            string[] firstLine = lines[0].Split(" ");
+            string method = firstLine[0];
+            string path = firstLine[1];
+
+            int i = 1;
+            while (i < lines.Length && lines[i] != "")
+            {              
+                string[] headerParts = lines[i].Split(':', 2);
+
+                if (headerParts.Length == 2)
+                {
+                    headers[headerParts[0].Trim()] = headerParts[1].Trim();
+                }
+                i++;
+            }
+            i++;
+            Console.WriteLine($"Received headers: {string.Join(", ", headers)}");
+
+            string body = string.Join("\r\n", lines.Skip(i).ToArray());
+            Console.WriteLine($"Body: {body}");
+            
+            Router(writer, method, path, body);
         }
 
-        public void Router(string method, string path, StreamWriter writer)
+        public void Router(StreamWriter writer, string method, string path, string body)
         {
             if (method == "GET")
             {
@@ -119,14 +137,6 @@ namespace MTCG_Models
                         writer.WriteLine("<html><head><title>MTCG - Home</title></head>");
                         writer.WriteLine("<body><h1>Welcome to Monster Trading Cards Game!</h1>");
                         writer.WriteLine("<p>Make sure to sign in! :)</p></body></html>");
-                        break;
-
-                    //  Retrieve data from the server
-                    case "/login":
-                        //  Send Success Response Code to Client
-                        HTTPResponse(writer, 200);
-                        writer.WriteLine("Redirecting to login.");
-                        //  Call login function here
                         break;
 
                     case "/sessions":
@@ -151,14 +161,22 @@ namespace MTCG_Models
                         //  Send Success Response Code to Client
                         HTTPResponse(writer, 200);
                         writer.WriteLine("Redirecting to registration.");
-                        Register(writer);
+                        Register(writer, "", "");
+                        break;
+
+                    //  Retrieve data from the server
+                    case "/login":
+                        //  Send Success Response Code to Client
+                        HTTPResponse(writer, 200);
+                        writer.WriteLine("Redirecting to login.");
+                        //  Login here
                         break;
 
                     case "/users":
                         //  Send Success Response Code to Client
                         HTTPResponse(writer, 200);
                         writer.WriteLine("Redirecting to users.");
-                        //Register();
+                        //  Missing implementation
                         break;
 
                     //  Path does not exist
@@ -189,6 +207,13 @@ namespace MTCG_Models
                     writer.WriteLine();
                     break;
 
+                case 400:
+                    writer.WriteLine("HTTP/1.1 400 Bad Request");
+                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine();
+                    writer.WriteLine("Malformed Request Syntax.");
+                    break;
+
                 case 404:
                     writer.WriteLine("HTTP/1.1 404 Not Found");
                     writer.WriteLine("Content-Type: text/html");
@@ -202,21 +227,19 @@ namespace MTCG_Models
                     writer.WriteLine();
                     writer.WriteLine("Method not supported.");
                     break;
+
+                default:
+                    //  Unexpected status codes
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Unknown Status");
+                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine();
+                    writer.WriteLine("Client requested unknown status.");
+                    break;
             }
         }
 
-        public bool Register(StreamWriter writer)
+        public bool Register(StreamWriter writer, string username, string password)
         {
-            string username = "";
-            string password = "";
-
-            /*
-            Console.WriteLine("Username: ");
-            Console.ReadLine(username);
-            Console.WriteLine("Password: ");
-            Console.ReadLine(password);
-            */
-
             if (string.IsNullOrWhiteSpace(username))
             {
                 writer.WriteLine("Username cannot be empty!");
