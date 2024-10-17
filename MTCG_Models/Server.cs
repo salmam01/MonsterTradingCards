@@ -1,17 +1,26 @@
 ﻿using MTCG_Model;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
+/*
+Curl Command:
+curl -X POST http://localhost:10001/users -H "Content-Type: application/json" -d "{\"Username\": \"newuser\", \"Password\": \"password123\"}"
+*/
 
 namespace MTCG_Models
 {
     public class Server
     {
         private TcpListener _listener;
-        private List<User> _users = new List<User>();
+        private List<User> _users = new();
 
 
         public Server(string url) 
@@ -47,14 +56,14 @@ namespace MTCG_Models
             finally
             {
                 _listener.Stop();
-            }           
+            }
         }
 
         public void RequestHandler(TcpClient client)
         {
             // Get a network stream object for reading from and writing to the client
             using NetworkStream stream = client.GetStream();
-            StreamWriter writer = new StreamWriter(stream);
+            StreamWriter writer = new(stream);
 
             // Buffer for reading data
             Byte[] bytes = new Byte[1024];
@@ -92,7 +101,8 @@ namespace MTCG_Models
             if (lines.Length == 0)
             {
                 Console.WriteLine("Invalid HTTP Request.");
-                HTTPResponse(writer, 400);
+                //HTTPResponse(writer, 400);
+                writer.WriteLine("Malformed Request Syntax.");
                 return;
             }
 
@@ -100,8 +110,8 @@ namespace MTCG_Models
 
             // First line of the HTTP request contains the HTTP version, method and path
             string[] firstLine = lines[0].Split(" ");
-            string method = firstLine[0];
-            string path = firstLine[1];
+            string method = firstLine[0].Trim();
+            string path = firstLine[1].Trim();
 
             int i = 1;
             while (i < lines.Length && lines[i] != "")
@@ -115,7 +125,6 @@ namespace MTCG_Models
                 i++;
             }
             i++;
-            Console.WriteLine($"Received headers: {string.Join(", ", headers)}");
 
             string body = string.Join("\r\n", lines.Skip(i).ToArray());
             Console.WriteLine($"Body: {body}");
@@ -125,145 +134,227 @@ namespace MTCG_Models
 
         public void Router(StreamWriter writer, string method, string path, string body)
         {
+            string message;
             if (method == "GET")
             {
                 Console.WriteLine($"Handling GET Request for {path}...");
                 switch (path)
                 {
                     case "/":
-                        //  Send Success Response Code to Client
-                        HTTPResponse(writer, 200);
-                        writer.WriteLine("<!DOCTYPE html>");
-                        writer.WriteLine("<html><head><title>MTCG - Home</title></head>");
-                        writer.WriteLine("<body><h1>Welcome to Monster Trading Cards Game!</h1>");
-                        writer.WriteLine("<p>Make sure to sign in! :)</p></body></html>");
+                        message = "Welcome to Monster Trading Cards Game!";
+                        HTTPResponse(writer, 200, message);
                         break;
 
-                    case "/sessions":
-                        //  Missing implementation
-                        break;
-
-                    //  Path does not exist
+                    //  Path does not exist, send Error Response Code to Client
                     default:
-                        Console.WriteLine("Invalid HTTP Request Path.");
-                        
-                        //  Send Error Response Code to Client
-                        HTTPResponse(writer, 404);
+                        message = "Invalid HTTP Request Path.";
+                        HTTPResponse(writer, 404, message);
                         break;
                 }
             }
             else if (method == "POST")
             {
                 Console.WriteLine($"Handling POST Request for {path}...");
+
+                //  Parse the body to get username and password                        
+                var data = ParseBody(writer, body);
+                int statusCode;
+
                 switch (path)
                 {
-                    case "/register":
-                        //  Send Success Response Code to Client
-                        HTTPResponse(writer, 200);
-                        writer.WriteLine("Redirecting to registration.");
-                        Register(writer, "", "");
+                    case "/users":
+
+                        statusCode = Register(data);
+                        Console.WriteLine(statusCode);
+
+                        if (statusCode == 200)
+                        {
+                            message = "User created successfully.";
+                        }
+                        else if (statusCode == 400)
+                        {
+                            message = "Username and password are required.";
+                        }
+                        else
+                        {
+                            message = "Username already exists.";
+                        }
+
+                        HTTPResponse(writer, statusCode, message);
                         break;
 
                     //  Retrieve data from the server
-                    case "/login":
-                        //  Send Success Response Code to Client
-                        HTTPResponse(writer, 200);
-                        writer.WriteLine("Redirecting to login.");
-                        //  Login here
-                        break;
+                    case "/sessions":
 
-                    case "/users":
-                        //  Send Success Response Code to Client
-                        HTTPResponse(writer, 200);
-                        writer.WriteLine("Redirecting to users.");
-                        //  Missing implementation
+                        Console.WriteLine("Redirecting to login.");
+                        statusCode = Login(data);
+                        
+                        if (statusCode == 200)
+                        {
+                            message = "User login successful.";
+                        }
+                        else
+                        {
+                            message = "Invalid username / password provided";
+                        }
+
+                        HTTPResponse(writer, statusCode, message);
                         break;
 
                     //  Path does not exist
                     default:
-                        Console.WriteLine("Invalid HTTP Request Path.");
-
-                        //  Send Error Response Code to Client
-                        HTTPResponse(writer, 404);
+                        message = ("Invalid HTTP Request Path.");
+                        HTTPResponse(writer, 404, message);
                         break;
                 }
+            }
+            else if (method == "PUT")
+            {
+                //  Code will be implemented later
+            }
+            else if (method == "DELETE")
+            {
+                //  Code will be implemented later
             }
             else
             {
                 //  Method is not allowed
-                Console.WriteLine("Method not supported.");
-                HTTPResponse(writer, 405);
+                message = "Method not supported.";
+                HTTPResponse(writer, 405, message);
             }
-            
         }
 
-        public void HTTPResponse(StreamWriter writer, int statusCode)
+        public Dictionary<string, string> ParseBody(StreamWriter writer, string body)
         {
+            if(body == null)
+            {
+                //throw Exception()
+                // problem idk the fix to
+            }
+            var data = new Dictionary<string, string>();
+            try
+            {
+                data = JsonSerializer.Deserialize<Dictionary<string, string>>(body);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Parsing body failed." + e.Message);
+                HTTPResponse(writer, 400, e.Message);
+            }
+            return data;
+        }
+
+        public void HTTPResponse(StreamWriter writer, int statusCode, string message)
+        {
+            //  Send Response back to client based on the status code
             switch(statusCode)
             {
                 case 200:
-                    writer.WriteLine("HTTP/1.1 200 OK");
+                    writer.WriteLine($"HTTP/1.1 {statusCode} OK");
                     writer.WriteLine("Content-Type: text/html");
                     writer.WriteLine();
+                    writer.WriteLine(message);
+                    break;
+
+                case 201:
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Created");
+                    writer.WriteLine("Content-Type: application/json");
+                    writer.WriteLine();
+                    writer.WriteLine(message);
                     break;
 
                 case 400:
-                    writer.WriteLine("HTTP/1.1 400 Bad Request");
-                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Bad Request");
+                    writer.WriteLine("Content-Type: application/json");
                     writer.WriteLine();
-                    writer.WriteLine("Malformed Request Syntax.");
+                    writer.WriteLine(message);
+                    break;
+
+                case 401:
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Unauthorized");
+                    writer.WriteLine("Content-Type: application/json");
+                    writer.WriteLine();
+                    writer.WriteLine(message);
+                    //writer.WriteLine("Invalid username/password provided.");
                     break;
 
                 case 404:
-                    writer.WriteLine("HTTP/1.1 404 Not Found");
-                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Not Found");
+                    writer.WriteLine("Content-Type: application/json");
                     writer.WriteLine();
-                    writer.WriteLine("Invalid HTTP Request Path.");
+                    writer.WriteLine(message);
+                    //writer.WriteLine("Invalid HTTP Request Path.");
                     break;
 
                 case 405:
-                    writer.WriteLine("HTTP/1.1 405 Method Not Allowed");
-                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Method Not Allowed");
+                    writer.WriteLine("Content-Type: application/json");
                     writer.WriteLine();
-                    writer.WriteLine("Method not supported.");
+                    writer.WriteLine(message);
+                    //writer.WriteLine("Method not supported.");
                     break;
 
+                case 409:
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Conflict");
+                    writer.WriteLine("Content-Type: application/json");
+                    writer.WriteLine();
+                    writer.WriteLine(message);
+                    break;
+
+                //  Unexpected status codes
                 default:
-                    //  Unexpected status codes
                     writer.WriteLine($"HTTP/1.1 {statusCode} Unknown Status");
-                    writer.WriteLine("Content-Type: text/html");
+                    writer.WriteLine("Content-Type: application/json");
                     writer.WriteLine();
                     writer.WriteLine("Client requested unknown status.");
                     break;
             }
         }
 
-        public bool Register(StreamWriter writer, string username, string password)
+        public int Register(Dictionary<string, string> data)
         {
-            if (string.IsNullOrWhiteSpace(username))
+            string username = data["Username"];
+            string password = data["Password"];
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
             {
-                writer.WriteLine("Username cannot be empty!");
-                return false;
-            }
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                writer.WriteLine("Password cannot be empty!");
-                return false;
+                return 400;
             }
 
             foreach (var user in _users)
             {
                 if(username == user.GetUsername)
                 {
-                    writer.WriteLine("Username already exists!");
-                    return false;
+                    return 409;
                 }
             }
 
-            User newUser = new User(username, password);
+            User newUser = new(username, password);
             _users.Add(newUser);
-            writer.WriteLine("Registration successful.");
-            return true;
+            Console.WriteLine(newUser.GetUsername);
+            Console.WriteLine(newUser.GetPassword);
+            return 200;
+        }
+
+        public int Login(Dictionary<string, string> data)
+        {
+            string username = data["Username"];
+            string password = data["Password"];
+
+            if (!(string.IsNullOrWhiteSpace(username) && string.IsNullOrWhiteSpace(password)))
+            {
+                foreach (var user in _users)
+                {
+                    if (username == user.GetUsername)
+                    {
+                        if (password == user.GetPassword)
+                        {
+                            return 200;
+                        }
+                    }
+                }
+            }
+            return 401;
         }
 
     }
