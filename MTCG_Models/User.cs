@@ -38,23 +38,6 @@ namespace MTCG_Model
             this.stack.Add(card);
         }*/
 
-        public int Login(string username, string password, StreamWriter writer)
-        {
-            if (username == null || password == null)
-            {
-                writer.WriteLine("Username or password cannot be empty!");
-                return 400;
-            }
-            if (username == this._username && password == this._password)
-            {
-                writer.WriteLine("Login successful!");
-                return 200;
-            }
-
-            writer.WriteLine("Credentials do not match!");
-            return 401;
-        }
-
         public bool IsDeckFree()
         {
             if(this._deck.Length == 0) return true;
