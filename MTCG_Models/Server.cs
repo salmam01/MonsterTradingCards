@@ -18,7 +18,7 @@ namespace MTCG_Models
     {
         private TcpListener _listener;
         //private List<Player> _players = new();
-        private Mutex _mutex;
+        //private Mutex _mutex;
 
         public Server(string url) 
         {
@@ -40,8 +40,8 @@ namespace MTCG_Models
                     Console.WriteLine("New client connected!");
 
                     //  Pass handling the client requests in a seperate thread
-                    Task.Run(() => RequestHandler(client));
-                    //RequestHandler(client);
+                    //Task.Run(() => RequestHandler(client));
+                    RequestHandler(client);
                 }
             }
             catch (SocketException e)
@@ -265,15 +265,16 @@ namespace MTCG_Models
             return data;
         }
 
-        public NpgsqlConnection ConnectToDatabase()
+        public static NpgsqlConnection ConnectToDatabase()
         {
             string host = "localhost";
             int port = 5432;
             string username = "salma";
-            string password = "mtcg1234";
-            string database = "MTCG_Database";
+            string password = "mtcg1234"; 
+            string database = "mtcg_database";
             
             string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
+            Console.WriteLine($"Connection String: {connectionString}");
 
             try
             {
@@ -346,7 +347,7 @@ namespace MTCG_Models
             }
             catch (Exception e)
             {
-                Console.WriteLine("", e);
+                Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
                 return 500;
             }
         }
