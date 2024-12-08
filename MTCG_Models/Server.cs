@@ -5,6 +5,8 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Threading;
+using Npgsql;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,8 +17,8 @@ namespace MTCG_Models
     public class Server
     {
         private TcpListener _listener;
-        private List<User> _users = new();
-
+        //private List<Player> _players = new();
+        private Mutex _mutex;
 
         public Server(string url) 
         {
@@ -37,8 +39,9 @@ namespace MTCG_Models
                     using TcpClient client = _listener.AcceptTcpClient();
                     Console.WriteLine("New client connected!");
 
-                    //  Pass handling the client requests to the function
-                    RequestHandler(client);
+                    //  Pass handling the client requests in a seperate thread
+                    Task.Run(() => RequestHandler(client));
+                    //RequestHandler(client);
                 }
             }
             catch (SocketException e)
@@ -202,6 +205,10 @@ namespace MTCG_Models
                     {
                         HTTPResponse(writer, statusCode, "Username and password are required.");
                     }
+                    else if(statusCode == 500)
+                    {
+                        HTTPResponse(writer, statusCode, "Server was unable to connect to database.");
+                    }
                     else
                     {
                         HTTPResponse(writer, statusCode, "Username already exists.");
@@ -258,33 +265,107 @@ namespace MTCG_Models
             return data;
         }
 
+        public NpgsqlConnection ConnectToDatabase()
+        {
+            string host = "localhost";
+            int port = 5432;
+            string username = "salma";
+            string password = "mtcg1234";
+            string database = "MTCG_Database";
+            
+            string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
+
+            try
+            {
+                using NpgsqlConnection connection = new NpgsqlConnection(connectionString);
+                connection.Open();
+                return connection;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
+        }
+
+        /* Useless for now
+        public object ExecuteCommand(NpgsqlConnection connection, string query, string queryType)
+        {
+            using NpgsqlCommand command = new NpgsqlCommand(query, connection);
+
+            switch(queryType)
+            {
+                case "Scalar":
+                    return command.ExecuteScalar();
+
+                case "NonQuery":
+                    return command.ExecuteNonQuery();
+                    
+                case "Reader":
+                    return command.ExecuteReader();
+
+                default:
+                    Console.WriteLine("Invalid Query Type");
+                    return null;
+            }
+        }
+        */
+
         //  Method that handles registering a new user
         public int Register(Dictionary<string, string> data)
         {
-            string username = data["Username"];
-            string password = data["Password"];
-
-            //  If username or password are empty, return 
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
+            try
             {
-                return 400;
-            }
+                string username = data["Username"];
+                string password = data["Password"];
 
-            //  Loop through the user list to check if the username is already in use
-            foreach (var user in _users)
-            {
-                if(username == user.GetUsername)
+                //  Can make this a method
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrWhiteSpace(password))
+                {
+                    return 400;
+                }
+
+                using NpgsqlConnection connection = ConnectToDatabase();
+                if (connection == null)
+                {
+                    return 500;
+                }
+                if (CheckIfUserExists(connection, username))
                 {
                     return 409;
                 }
+
+                using NpgsqlCommand command = new NpgsqlCommand("INSERT INTO player (column2, column3) VALUES (@username, @password)", connection);
+
+                command.Parameters.AddWithValue("username", username);
+                command.Parameters.AddWithValue("password", password);
+                command.ExecuteNonQuery();
+                Console.WriteLine($"{username} has been added to database!");
+
+                return 201;
             }
-            
-            //  Create a new user and add them to the list
-            User newUser = new(username, password);
-            _users.Add(newUser);
-            Console.WriteLine(newUser.GetUsername);
-            Console.WriteLine(newUser.GetPassword);
-            return 201;
+            catch (Exception e)
+            {
+                Console.WriteLine("", e);
+                return 500;
+            }
+        }
+
+        public static bool CheckIfUserExists(NpgsqlConnection connection, string username)
+        {
+            try
+            {
+                using NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM player WHERE username = @username", connection);
+                command.Parameters.AddWithValue("username", username);
+                
+                //  Check if the username already exists, UNIQUE constraint is set so it should never be > 1
+                return (Convert.ToInt32(command.ExecuteScalar()) > 0);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while checking for user: {e.Message}");
+                throw;
+            }
         }
 
         //  Method that handles login from already registered Users
@@ -293,20 +374,41 @@ namespace MTCG_Models
             string username = data["Username"];
             string password = data["Password"];
 
-            if (!(string.IsNullOrWhiteSpace(username) && string.IsNullOrWhiteSpace(password)))
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                //  Loop through the user list to find the username and check if it matches the password
-                foreach (var user in _users)
+                return 400;
+            }
+            try
+            {
+                using NpgsqlConnection connection = ConnectToDatabase();
+                if (!CheckIfUserExists(connection, username))
                 {
-                    if (username == user.GetUsername)
-                    {
-                        if (password == user.GetPassword)
-                        {
-                            return 200;
-                        }
-                    }
+                    return 401;
+                }
+
+                using NpgsqlCommand command = new NpgsqlCommand("SELECT password FROM player WHERE username = @username", connection);
+                command.Parameters.AddWithValue("username", username);
+                object resultObj = command.ExecuteScalar();
+
+                if(resultObj == null)
+                {
+                    return 401;
+                }
+
+                string result = resultObj?.ToString();
+                
+                if (result == password)
+                {
+                    Console.WriteLine($"{username} logged in successfully!");
+                    return 200;
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during login: {e.Message}");
+                return 500;
+            }
+            
             return 401;
         }
 
@@ -342,6 +444,10 @@ namespace MTCG_Models
 
                 case 409:
                     writer.WriteLine($"HTTP/1.1 {statusCode} Conflict");
+                    break;
+
+                case 500:
+                    writer.WriteLine($"HTTP/1.1 {statusCode} Internal Server Error");
                     break;
 
                 //  Unexpected status codes

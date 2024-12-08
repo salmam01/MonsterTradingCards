@@ -3,7 +3,7 @@ using System;
 
 namespace MTCG_Model
 {
-    public class User
+    public class Player
     {
         private string _username;
         private string _password;
@@ -16,7 +16,7 @@ namespace MTCG_Model
         private Card[] _deck = new Card[4];
 
 
-        public User(string username, string password)
+        public Player(string username, string password)
         {
             this._username = username;
             this._password = password;
