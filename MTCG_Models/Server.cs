@@ -37,7 +37,7 @@ namespace MTCG_Models
                 while (true)
                 {
                     using TcpClient client = _listener.AcceptTcpClient();
-                    Console.WriteLine("New client connected!");
+                    Console.WriteLine("\nNew client connected!");
 
                     //  Pass handling the client requests in a seperate thread
                     //Task.Run(() => RequestHandler(client));
@@ -268,18 +268,20 @@ namespace MTCG_Models
         public static NpgsqlConnection ConnectToDatabase()
         {
             string host = "localhost";
-            int port = 5432;
+            string port = "5432";
             string username = "salma";
             string password = "mtcg1234"; 
             string database = "mtcg_database";
             
             string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
             Console.WriteLine($"Connection String: {connectionString}");
-
+            
             try
             {
-                using NpgsqlConnection connection = new NpgsqlConnection(connectionString);
+                NpgsqlConnection connection = new NpgsqlConnection(connectionString);
                 connection.Open();
+                Console.WriteLine("Connection state after opening: " + connection.State);
+
                 return connection;
             }
             catch (Exception e)
@@ -288,29 +290,6 @@ namespace MTCG_Models
                 throw;
             }
         }
-
-        /* Useless for now
-        public object ExecuteCommand(NpgsqlConnection connection, string query, string queryType)
-        {
-            using NpgsqlCommand command = new NpgsqlCommand(query, connection);
-
-            switch(queryType)
-            {
-                case "Scalar":
-                    return command.ExecuteScalar();
-
-                case "NonQuery":
-                    return command.ExecuteNonQuery();
-                    
-                case "Reader":
-                    return command.ExecuteReader();
-
-                default:
-                    Console.WriteLine("Invalid Query Type");
-                    return null;
-            }
-        }
-        */
 
         //  Method that handles registering a new user
         public int Register(Dictionary<string, string> data)
@@ -329,14 +308,17 @@ namespace MTCG_Models
                 using NpgsqlConnection connection = ConnectToDatabase();
                 if (connection == null)
                 {
+                    Console.WriteLine("Connection is null.");
                     return 500;
                 }
                 if (CheckIfUserExists(connection, username))
                 {
+                    Console.WriteLine("User already exists.");
                     return 409;
                 }
 
-                using NpgsqlCommand command = new NpgsqlCommand("INSERT INTO player (column2, column3) VALUES (@username, @password)", connection);
+                Console.WriteLine("Connection status: " + connection.State);
+                using NpgsqlCommand command = new NpgsqlCommand("INSERT INTO player (username, password) VALUES (@username, @password)", connection);
 
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("password", password);
@@ -462,5 +444,28 @@ namespace MTCG_Models
             writer.WriteLine();
             writer.WriteLine(message);
         }
+
+        /* Useless for now
+        public object ExecuteCommand(NpgsqlConnection connection, string query, string queryType)
+        {
+            using NpgsqlCommand command = new NpgsqlCommand(query, connection);
+
+            switch(queryType)
+            {
+                case "Scalar":
+                    return command.ExecuteScalar();
+
+                case "NonQuery":
+                    return command.ExecuteNonQuery();
+                    
+                case "Reader":
+                    return command.ExecuteReader();
+
+                default:
+                    Console.WriteLine("Invalid Query Type");
+                    return null;
+            }
+        }
+        */
     }
 }
