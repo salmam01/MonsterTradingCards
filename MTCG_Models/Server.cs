@@ -141,17 +141,21 @@ namespace MTCG_Models
                 case "GET":
                     GetRequestHandler(writer, path);
                     break;
+
                 case "POST":
                     PostRequestHandler(writer, path, body);
                     break;
+
                 case "PUT":
                     //  Code will be implemented later
                     HTTPResponse(writer, 405, "Method not supported.");
                     break;
+
                 case "DELETE":
                     //  Code will be implemented later
                     HTTPResponse(writer, 405, "Method not supported.");
                     break;
+
                 default:
                     HTTPResponse(writer, 405, "Method not supported.");
                     break;
@@ -225,7 +229,7 @@ namespace MTCG_Models
 
                     if (statusCode == 200)
                     {
-                        HTTPResponse(writer, statusCode, "User login successful.");
+                        HTTPResponse(writer, statusCode, "Login successful.");
                     }
                     else
                     {
@@ -284,6 +288,11 @@ namespace MTCG_Models
 
                 return connection;
             }
+            catch(NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
@@ -292,7 +301,7 @@ namespace MTCG_Models
         }
 
         //  Method that handles registering a new user
-        public int Register(Dictionary<string, string> data)
+        public static int Register(Dictionary<string, string> data)
         {
             try
             {
@@ -327,6 +336,11 @@ namespace MTCG_Models
 
                 return 201;
             }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
@@ -344,6 +358,11 @@ namespace MTCG_Models
                 //  Check if the username already exists, UNIQUE constraint is set so it should never be > 1
                 return (Convert.ToInt32(command.ExecuteScalar()) > 0);
             }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"Error while checking for user: {e.Message}");
@@ -352,7 +371,7 @@ namespace MTCG_Models
         }
 
         //  Method that handles login from already registered Users
-        public int Login(Dictionary<string, string> data)
+        public static int Login(Dictionary<string, string> data)
         {
             string username = data["Username"];
             string password = data["Password"];
@@ -386,6 +405,11 @@ namespace MTCG_Models
                     return 200;
                 }
             }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during login: {e.Message}");
@@ -396,7 +420,7 @@ namespace MTCG_Models
         }
 
         //  Method that is responsible for handling the correct HTTP status messages
-        public void HTTPResponse(StreamWriter writer, int statusCode, string message)
+        public static void HTTPResponse(StreamWriter writer, int statusCode, string message)
         {
             //  Send Response back to client based on the status code
             switch (statusCode)
