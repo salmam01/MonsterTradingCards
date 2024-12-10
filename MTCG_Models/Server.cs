@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading;
 using Npgsql;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -59,7 +60,7 @@ namespace MTCG_Models
         }
 
         //  Method that handles Client Requests
-        public void RequestHandler(TcpClient client)
+        public static void RequestHandler(TcpClient client)
         {
             // Get a network stream object for reading from and writing to the client
             using NetworkStream stream = client.GetStream();
@@ -94,7 +95,7 @@ namespace MTCG_Models
             }
         }
 
-        public void ParseRequest(StreamWriter writer, string request)
+        public static void ParseRequest(StreamWriter writer, string request)
         {
             //  Split the request string by each line
             string[] lines = request.Split("\r\n");
@@ -134,7 +135,7 @@ namespace MTCG_Models
         }
 
         //  Method that redirects users depending on the HTTP method
-        public void Router(StreamWriter writer, string method, string path, string body)
+        public static void Router(StreamWriter writer, string method, string path, string body)
         {
             switch(method)
             {
@@ -163,7 +164,7 @@ namespace MTCG_Models
         }
 
         //  Method that handles GET Requests
-        public void GetRequestHandler(StreamWriter writer, string path)
+        public static void GetRequestHandler(StreamWriter writer, string path)
         {
             Console.WriteLine($"Handling GET Request for {path}...");
             switch (path)
@@ -180,11 +181,11 @@ namespace MTCG_Models
         }
 
         //  Method that handles POST Requests
-        public void PostRequestHandler(StreamWriter writer, string path, string body)
+        public static void PostRequestHandler(StreamWriter writer, string path, string body)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            //  Parse the body to get username and password                        
+            //  Parse the body to get username and password
             var data = ParseBody(writer, body);
             if(data == null)
             {
@@ -247,26 +248,28 @@ namespace MTCG_Models
         }
 
         //  Method to parse the body from JSON to a dictionary pair
-        public Dictionary<string, string> ParseBody(StreamWriter writer, string body)
+        public static Dictionary<string, string> ParseBody(StreamWriter writer, string body)
         {
             //  If body contains nothing in it, output an error code
             if(string.IsNullOrWhiteSpace(body))
             {
                 HTTPResponse(writer, 400, "Request Body is empty.");
+                return null;
             }
             
-            //  Save the data in a dictionary
-            var data = new Dictionary<string, string>();
             try
             {
+                var data = new Dictionary<string, string>();
                 data = JsonSerializer.Deserialize<Dictionary<string, string>>(body);
+
+                return data;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Parsing body failed." + e.Message);
                 HTTPResponse(writer, 400, "Parsing body failed.");
+                throw;
             }
-            return data;
         }
 
         public static NpgsqlConnection ConnectToDatabase()
@@ -278,14 +281,11 @@ namespace MTCG_Models
             string database = "mtcg_database";
             
             string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
-            Console.WriteLine($"Connection String: {connectionString}");
             
             try
             {
-                NpgsqlConnection connection = new NpgsqlConnection(connectionString);
+                NpgsqlConnection connection = new(connectionString);
                 connection.Open();
-                Console.WriteLine("Connection state after opening: " + connection.State);
-
                 return connection;
             }
             catch(NpgsqlException e)
@@ -307,6 +307,8 @@ namespace MTCG_Models
             {
                 string username = data["Username"];
                 string password = data["Password"];
+                string token = GenerateToken(username);
+                Console.WriteLine($"Generated token: {token}");
 
                 //  Can make this a method
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrWhiteSpace(password))
@@ -325,10 +327,11 @@ namespace MTCG_Models
                     Console.WriteLine("User already exists.");
                     return 409;
                 }
+                Console.WriteLine("Connection successfully established with Database.");
+                
+                using NpgsqlCommand command = new("INSERT INTO player (token, username, password) VALUES (@token, @username, @password)", connection);
 
-                Console.WriteLine("Connection status: " + connection.State);
-                using NpgsqlCommand command = new NpgsqlCommand("INSERT INTO player (username, password) VALUES (@username, @password)", connection);
-
+                command.Parameters.AddWithValue("token", token);
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("password", password);
                 command.ExecuteNonQuery();
@@ -352,7 +355,7 @@ namespace MTCG_Models
         {
             try
             {
-                using NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM player WHERE username = @username", connection);
+                using NpgsqlCommand command = new("SELECT COUNT(*) FROM player WHERE username = @username", connection);
                 command.Parameters.AddWithValue("username", username);
                 
                 //  Check if the username already exists, UNIQUE constraint is set so it should never be > 1
@@ -370,11 +373,18 @@ namespace MTCG_Models
             }
         }
 
+        public static string GenerateToken(string username)
+        {
+            return username + "-mtcgToken";
+        }
+
         //  Method that handles login from already registered Users
         public static int Login(Dictionary<string, string> data)
         {
             string username = data["Username"];
             string password = data["Password"];
+            // FOR NOW, CHANGE LATER
+            string token = username + "-mtcgToken";
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
@@ -388,7 +398,13 @@ namespace MTCG_Models
                     return 401;
                 }
 
-                using NpgsqlCommand command = new NpgsqlCommand("SELECT password FROM player WHERE username = @username", connection);
+                if (!CheckIfTokenIsValid(connection, username, token))
+                {
+                    Console.WriteLine("Invalid Client Token.");
+                    return 401;
+                }
+
+                using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", connection);
                 command.Parameters.AddWithValue("username", username);
                 object resultObj = command.ExecuteScalar();
 
@@ -417,6 +433,33 @@ namespace MTCG_Models
             }
             
             return 401;
+        }
+
+        public static bool CheckIfTokenIsValid(NpgsqlConnection connection, string username, string token)
+        {
+            try
+            {
+                using NpgsqlCommand command = new("SELECT @username FROM player WHERE token = @token", connection);
+                command.Parameters.AddWithValue("username", username);
+                command.Parameters.AddWithValue("token", token);
+                object resultObj = command.ExecuteScalar();
+                
+                if(resultObj == null)
+                {
+                    return false;
+                }
+                return true;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                throw;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while checking for user: {e.Message}");
+                throw;
+            }
         }
 
         //  Method that is responsible for handling the correct HTTP status messages
