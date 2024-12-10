@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class Trade
     {

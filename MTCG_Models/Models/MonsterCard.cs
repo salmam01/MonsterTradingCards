@@ -1,18 +1,18 @@
 ﻿using System;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class MonsterCard : Card
     {
-        public MonsterCard() 
+        public MonsterCard()
         {
-            this.type = 'M';
-            
+            type = 'M';
+
         }
 
         public void Attack(Card enemy)
         {
-            
+
         }
     }
 }

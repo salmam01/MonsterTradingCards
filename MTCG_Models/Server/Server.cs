@@ -1,5 +1,4 @@
-﻿using MTCG_Model;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -13,15 +12,16 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
+    //-------------------------------------------------------->MISSING MORE ERROR HANDLING FOR REQUEST PARSING<---------------------------------------------------------------
     public class Server
     {
         private TcpListener _listener;
         //private List<Player> _players = new();
         //private Mutex _mutex;
 
-        public Server(string url) 
+        public Server(string url)
         {
             var uri = new Uri(url);
             int port = uri.Port;
@@ -67,20 +67,28 @@ namespace MTCG_Models
             StreamWriter writer = new(stream);
 
             // Buffer for reading data
-            Byte[] bytes = new Byte[1024];
+            byte[] bytes = new byte[1024];
             string request;
 
             try
             {
                 int bytesRead;
                 while ((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
-                {                  
+                {
                     // Translate data bytes to an ASCII string.
                     request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                    Console.WriteLine($"Received: {request}");
-                    ParseRequest(writer, request);      
-                    
-                    //  Output response
+                    Console.WriteLine($"Received:\n{request}");
+
+                    Dictionary<string, string> requestData = new();
+                    requestData = Parser.ParseRequest(writer, request);
+                    if(requestData == null)
+                    {
+                        HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
+                        continue;
+                    }
+
+                    Router(writer, requestData);
+
                     writer.Flush();
                 }
             }
@@ -95,102 +103,61 @@ namespace MTCG_Models
             }
         }
 
-        public static void ParseRequest(StreamWriter writer, string request)
-        {
-            //  Split the request string by each line
-            string[] lines = request.Split("\r\n");
-
-            if (lines.Length == 0)
-            {
-                Console.WriteLine("Malformed Request Syntax.");
-                HTTPResponse(writer, 400, "Malformed Request Syntax.");
-                return;
-            }
-
-            Dictionary<string, string> headers = new();
-
-            // First line of the HTTP request contains the HTTP version, method and path
-            string[] firstLine = lines[0].Split(" ");
-            string method = firstLine[0].Trim();
-            string path = firstLine[1].Trim();
-
-            //  Split the header into pairs and add them to the dictionary
-            int i = 1;
-            while (i < lines.Length && lines[i] != "")
-            {              
-                string[] headerParts = lines[i].Split(':', 2);
-
-                if (headerParts.Length == 2)
-                {
-                    headers[headerParts[0].Trim()] = headerParts[1].Trim();
-                }
-                i++;
-            }
-            i++;
-
-            string body = string.Join("\r\n", lines.Skip(i).ToArray());
-            Console.WriteLine($"Body: {body}");
-            
-            Router(writer, method, path, body);
-        }
-
         //  Method that redirects users depending on the HTTP method
-        public static void Router(StreamWriter writer, string method, string path, string body)
+        public static void Router(StreamWriter writer, Dictionary<string, string> request)
         {
-            switch(method)
+            string method = request["Method"];
+
+            switch (method)
             {
                 case "GET":
-                    GetRequestHandler(writer, path);
+                    GetRequestHandler(writer, request);
                     break;
 
                 case "POST":
-                    PostRequestHandler(writer, path, body);
+                    PostRequestHandler(writer, request);
                     break;
 
                 case "PUT":
                     //  Code will be implemented later
-                    HTTPResponse(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
 
                 case "DELETE":
                     //  Code will be implemented later
-                    HTTPResponse(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
 
                 default:
-                    HTTPResponse(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
             }
         }
 
         //  Method that handles GET Requests
-        public static void GetRequestHandler(StreamWriter writer, string path)
+        public static void GetRequestHandler(StreamWriter writer, Dictionary<string, string> request)
         {
+            string path = request["Path"];
             Console.WriteLine($"Handling GET Request for {path}...");
+
             switch (path)
             {
                 case "/":
-                    HTTPResponse(writer, 200, "Welcome to Monster Trading Cards Game!");
+                    HTTPResponse.Response(writer, 200, "Welcome to Monster Trading Cards Game!");
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    HTTPResponse(writer, 404, "Invalid HTTP Request Path.");
+                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
                     break;
             }
         }
 
         //  Method that handles POST Requests
-        public static void PostRequestHandler(StreamWriter writer, string path, string body)
+        public static void PostRequestHandler(StreamWriter writer, Dictionary<string, string> request)
         {
-            Console.WriteLine($"Handling POST Request for {path}...");
-
-            //  Parse the body to get username and password
-            var data = ParseBody(writer, body);
-            if(data == null)
-            {
-                return;
-            }
+            string path = request["Path"];
+            Console.WriteLine($"Handling POST Request for {path}..."); 
 
             int statusCode;
             switch (path)
@@ -199,24 +166,24 @@ namespace MTCG_Models
                 case "/users":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = Register(data);
+                    statusCode = Register(request);
                     Console.WriteLine(statusCode);
 
                     if (statusCode == 201)
                     {
-                        HTTPResponse(writer, statusCode, "User created successfully.");
+                        HTTPResponse.Response(writer, statusCode, "User created successfully");
                     }
                     else if (statusCode == 400)
                     {
-                        HTTPResponse(writer, statusCode, "Username and password are required.");
+                        HTTPResponse.Response(writer, statusCode, "Username and password are required");
                     }
-                    else if(statusCode == 500)
+                    else if (statusCode == 500)
                     {
-                        HTTPResponse(writer, statusCode, "Server was unable to connect to database.");
+                        HTTPResponse.Response(writer, statusCode, "Server was unable to connect to database");
                     }
                     else
                     {
-                        HTTPResponse(writer, statusCode, "Username already exists.");
+                        HTTPResponse.Response(writer, statusCode, "Username already exists");
                     }
 
                     break;
@@ -225,16 +192,16 @@ namespace MTCG_Models
                 case "/sessions":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = Login(data);
+                    statusCode = Login(request);
                     Console.WriteLine(statusCode);
 
                     if (statusCode == 200)
                     {
-                        HTTPResponse(writer, statusCode, "Login successful.");
+                        HTTPResponse.Response(writer, statusCode, "Login successful");
                     }
                     else
                     {
-                        HTTPResponse(writer, statusCode, "Invalid username / password provided");
+                        HTTPResponse.Response(writer, statusCode, "Invalid username / password provided");
                     }
 
                     break;
@@ -242,33 +209,8 @@ namespace MTCG_Models
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse(writer, 404, "Invalid HTTP Request Path.");
+                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
                     break;
-            }
-        }
-
-        //  Method to parse the body from JSON to a dictionary pair
-        public static Dictionary<string, string> ParseBody(StreamWriter writer, string body)
-        {
-            //  If body contains nothing in it, output an error code
-            if(string.IsNullOrWhiteSpace(body))
-            {
-                HTTPResponse(writer, 400, "Request Body is empty.");
-                return null;
-            }
-            
-            try
-            {
-                var data = new Dictionary<string, string>();
-                data = JsonSerializer.Deserialize<Dictionary<string, string>>(body);
-
-                return data;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Parsing body failed." + e.Message);
-                HTTPResponse(writer, 400, "Parsing body failed.");
-                throw;
             }
         }
 
@@ -277,20 +219,21 @@ namespace MTCG_Models
             string host = "localhost";
             string port = "5432";
             string username = "salma";
-            string password = "mtcg1234"; 
+            string password = "mtcg1234";
             string database = "mtcg_database";
-            
+
             string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
-            
+
             try
             {
                 NpgsqlConnection connection = new(connectionString);
                 connection.Open();
                 return connection;
             }
-            catch(NpgsqlException e)
+            catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
+
                 throw;
             }
             catch (Exception e)
@@ -301,12 +244,12 @@ namespace MTCG_Models
         }
 
         //  Method that handles registering a new user
-        public static int Register(Dictionary<string, string> data)
+        public static int Register(Dictionary<string, string> request)
         {
             try
             {
-                string username = data["Username"];
-                string password = data["Password"];
+                string username = request["Username"];
+                string password = request["Password"];
                 string token = GenerateToken(username);
                 Console.WriteLine($"Generated token: {token}");
 
@@ -328,7 +271,7 @@ namespace MTCG_Models
                     return 409;
                 }
                 Console.WriteLine("Connection successfully established with Database.");
-                
+
                 using NpgsqlCommand command = new("INSERT INTO player (token, username, password) VALUES (@token, @username, @password)", connection);
 
                 command.Parameters.AddWithValue("token", token);
@@ -357,9 +300,9 @@ namespace MTCG_Models
             {
                 using NpgsqlCommand command = new("SELECT COUNT(*) FROM player WHERE username = @username", connection);
                 command.Parameters.AddWithValue("username", username);
-                
+
                 //  Check if the username already exists, UNIQUE constraint is set so it should never be > 1
-                return (Convert.ToInt32(command.ExecuteScalar()) > 0);
+                return Convert.ToInt32(command.ExecuteScalar()) > 0;
             }
             catch (NpgsqlException e)
             {
@@ -408,13 +351,13 @@ namespace MTCG_Models
                 command.Parameters.AddWithValue("username", username);
                 object resultObj = command.ExecuteScalar();
 
-                if(resultObj == null)
+                if (resultObj == null)
                 {
                     return 401;
                 }
 
                 string result = resultObj?.ToString();
-                
+
                 if (result == password)
                 {
                     Console.WriteLine($"{username} logged in successfully!");
@@ -431,7 +374,7 @@ namespace MTCG_Models
                 Console.WriteLine($"Error occured during login: {e.Message}");
                 return 500;
             }
-            
+
             return 401;
         }
 
@@ -443,8 +386,8 @@ namespace MTCG_Models
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("token", token);
                 object resultObj = command.ExecuteScalar();
-                
-                if(resultObj == null)
+
+                if (resultObj == null)
                 {
                     return false;
                 }
@@ -461,78 +404,5 @@ namespace MTCG_Models
                 throw;
             }
         }
-
-        //  Method that is responsible for handling the correct HTTP status messages
-        public static void HTTPResponse(StreamWriter writer, int statusCode, string message)
-        {
-            //  Send Response back to client based on the status code
-            switch (statusCode)
-            {
-                case 200:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} OK");
-                    break;
-
-                case 201:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Created");
-                    break;
-
-                case 400:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Bad Request");
-                    break;
-
-                case 401:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Unauthorized");
-                    break;
-
-                case 404:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Not Found");
-                    break;
-
-                case 405:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Method Not Allowed");
-                    break;
-
-                case 409:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Conflict");
-                    break;
-
-                case 500:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Internal Server Error");
-                    break;
-
-                //  Unexpected status codes
-                default:
-                    writer.WriteLine($"HTTP/1.1 {statusCode} Unknown Status");
-                    message = "Client requested unknown status.";
-                    break;
-            }
-
-            writer.WriteLine("Content-Type: application/json");
-            writer.WriteLine();
-            writer.WriteLine(message);
-        }
-
-        /* Useless for now
-        public object ExecuteCommand(NpgsqlConnection connection, string query, string queryType)
-        {
-            using NpgsqlCommand command = new NpgsqlCommand(query, connection);
-
-            switch(queryType)
-            {
-                case "Scalar":
-                    return command.ExecuteScalar();
-
-                case "NonQuery":
-                    return command.ExecuteNonQuery();
-                    
-                case "Reader":
-                    return command.ExecuteReader();
-
-                default:
-                    Console.WriteLine("Invalid Query Type");
-                    return null;
-            }
-        }
-        */
     }
 }

@@ -1,15 +1,15 @@
 ﻿using System;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class ScoreBoard
     {
-        public ScoreBoard() 
+        public ScoreBoard()
         {
-            
+
         }
         //  should be vector
-        private int[] players; 
+        private int[] players;
 
         public void PlayerRanking()
         {

@@ -1,12 +1,12 @@
 ﻿using System;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class SpellCard : Card
     {
-        public SpellCard() 
+        public SpellCard()
         {
-            this.type = 'S';
+            type = 'S';
         }
 
         public void Attack(Card enemy)

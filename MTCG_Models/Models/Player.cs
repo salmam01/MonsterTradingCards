@@ -1,7 +1,6 @@
-﻿using MTCG_Models;
-using System;
+﻿using System;
 
-namespace MTCG_Model
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class Player
     {
@@ -18,12 +17,12 @@ namespace MTCG_Model
 
         public Player(string username, string password)
         {
-            this._username = username;
-            this._password = password;
-            this._elo = 100;
-            this._coins = 20;
-            this._stack = new List<Card>();
-            this._deck = new Card[4];
+            _username = username;
+            _password = password;
+            _elo = 100;
+            _coins = 20;
+            _stack = new List<Card>();
+            _deck = new Card[4];
         }
 
         public string GetUsername { get { return _username; } }
@@ -40,11 +39,11 @@ namespace MTCG_Model
 
         public bool IsDeckFree()
         {
-            if(this._deck.Length == 0) return true;
+            if (_deck.Length == 0) return true;
 
-            for(int i = 0; i < this._deck.Length; i++)
+            for (int i = 0; i < _deck.Length; i++)
             {
-                if (this._deck[i] == null)
+                if (_deck[i] == null)
                 {
                     return true;
                 }
@@ -55,12 +54,12 @@ namespace MTCG_Model
         //  Don't forget to calculate the trueposition before function call
         public bool CheckPosition(int position)
         {
-            if (position < 0 || position >= this._deck.Length)
+            if (position < 0 || position >= _deck.Length)
             {
                 Console.WriteLine("Invalid position. Please choose a position between 1 and 4.");
                 return false;
             }
-            if (this._deck[position] != null)
+            if (_deck[position] != null)
             {
                 Console.WriteLine("There is already a card at that position.");
                 return false;
@@ -89,22 +88,22 @@ namespace MTCG_Model
 
         public void PrintDeck()
         {
-            if(this._deck.Length == 0)
+            if (_deck.Length == 0)
             {
                 Console.WriteLine("Deck is empty.");
                 return;
             }
-            for (int i = 0; i < this._deck.Length; i++)
+            for (int i = 0; i < _deck.Length; i++)
             {
-                Console.WriteLine((i + 1) + "." + this._deck[i]);
+                Console.WriteLine(i + 1 + "." + _deck[i]);
             }
         }
 
         public void printStack()
         {
-            for (int i = 0; i < this._stack.Count; i++)
+            for (int i = 0; i < _stack.Count; i++)
             {
-                Console.WriteLine((i + 1) + ". " + this._stack[i]);
+                Console.WriteLine(i + 1 + ". " + _stack[i]);
             }
         }
     }

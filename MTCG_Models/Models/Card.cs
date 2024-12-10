@@ -1,7 +1,6 @@
-﻿using MTCG_Models;
-using System;
+﻿using System;
 
-namespace MTCG_Models
+namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 {
     public class Card
     {
@@ -14,7 +13,7 @@ namespace MTCG_Models
 
         public string GetName() { return name; }
         public int GetDamage() { return damage; }
-        public int GetElement() { return element; } 
+        public int GetElement() { return element; }
         public void Attack(Card enemy) { }
 
     }
