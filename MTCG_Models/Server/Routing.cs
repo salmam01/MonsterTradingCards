@@ -10,37 +10,42 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     public class Routing
     {
         //  Method that redirects users depending on the HTTP method
-        /*public static void Router(StreamWriter writer, string method, string path, string body)
+        public static void Router(StreamWriter writer, Dictionary<string, string> request)
         {
+            string method = request["Method"];
+
             switch (method)
             {
                 case "GET":
-                    GetRequestHandler(writer, path);
+                    GetRequestHandler(writer, request);
                     break;
 
                 case "POST":
-                    PostRequestHandler(writer, path, body);
+                    PostRequestHandler(writer, request);
                     break;
 
                 case "PUT":
                     //  Code will be implemented later
-                    HTTPResponse.Response(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
 
                 case "DELETE":
                     //  Code will be implemented later
-                    HTTPResponse.Response(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
 
                 default:
-                    HTTPResponse.Response(writer, 405, "Method not supported.");
+                    HTTPResponse.Response(writer, 405, "Method not supported");
                     break;
             }
         }
 
-        public static void GetRequestHandler(StreamWriter writer, string path)
+        //  Method that handles GET Requests
+        public static void GetRequestHandler(StreamWriter writer, Dictionary<string, string> request)
         {
+            string path = request["Path"];
             Console.WriteLine($"Handling GET Request for {path}...");
+
             switch (path)
             {
                 case "/":
@@ -49,47 +54,47 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path.");
+                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
                     break;
             }
         }
 
-        public static void PostRequestHandler(StreamWriter writer, string path, string body)
+        //  REWORK THIS SHIT PLS
+        //  Method that handles POST Requests
+        public static void PostRequestHandler(StreamWriter writer, Dictionary<string, string> request)
         {
+            string path = request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            //  Parse the body to get username and password
-            var data = Parser.RegisterParser(writer, body);
-            if (data == null)
-            {
-                return;
-            }
-
             int statusCode;
+            string token = null;
             switch (path)
             {
-                //API-Endpoint for sign up
+                //  API-Endpoint for sign up
                 case "/users":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = Register(data);
-                    Console.WriteLine(statusCode);
+                    (statusCode, token) = UserManagement.Register(request);
+                    Console.WriteLine($"Status: {statusCode}");
 
-                    if (statusCode == 201)
+                    switch(statusCode)
                     {
-                        HTTPResponse.Response(writer, statusCode, "User created successfully.");
-                    }
-                    else if (statusCode == 400)
-                    {
-                        HTTPResponse.Response(writer, statusCode, "Username and password are required.");
-                    }
-                    else if (statusCode == 500)
-                    {
-                        HTTPResponse.Response(writer, statusCode, "Server was unable to connect to database.");
-                    }
-                    else
-                    {
-                        HTTPResponse.Response(writer, statusCode, "Username already exists.");
+                        case 201:
+                            TokenManagement.SendTokenToClient(writer, statusCode, "User created successfully", token);
+                            //HTTPResponse.Response(writer, statusCode, "User created successfully.");
+                            break;
+
+                        case 400:
+                            HTTPResponse.Response(writer, statusCode, "Username and password are required.");
+                            break;
+
+                        case 409:
+                            HTTPResponse.Response(writer, statusCode, "Username already exists.");
+                            break;
+
+                        default:
+                            HTTPResponse.Response(writer, statusCode, "Internal Server error occured.");
+                            break;
                     }
 
                     break;
@@ -98,27 +103,40 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 case "/sessions":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = Login(data);
+                    statusCode = UserManagement.Login(request);
                     Console.WriteLine(statusCode);
 
-                    if (statusCode == 200)
+                    switch (statusCode)
                     {
-                        HTTPResponse.Response(writer, statusCode, "Login successful.");
-                    }
-                    else
-                    {
-                        HTTPResponse.Response(writer, statusCode, "Invalid username / password provided");
-                    }
+                        case 200:
+                            HTTPResponse.Response(writer, statusCode, "Login successful.");
+                            break;
 
+                        case 400:
+                            HTTPResponse.Response(writer, statusCode, "Username or Password cannot be empty.");
+                            break;
+
+                        case 401:
+                            HTTPResponse.Response(writer, statusCode, "Invalid Client Authentication Token.");
+                            break;
+
+                        case 404:
+                            HTTPResponse.Response(writer, statusCode, "Incorrect Username or Password.");
+                            break;
+
+                        default:
+                            HTTPResponse.Response(writer, statusCode, "Internal Server Error occured.");
+                            break;
+                    }
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path.");
+                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
                     break;
             }
         }
-        */
+
     }
 }
