@@ -74,14 +74,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 case "/users":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    (statusCode, token) = UserManagement.Register(request);
+                    statusCode = UserManagement.Register(request);
                     Console.WriteLine($"Status: {statusCode}");
 
                     switch(statusCode)
                     {
                         case 201:
-                            TokenManagement.SendTokenToClient(writer, statusCode, "User created successfully", token);
-                            //HTTPResponse.Response(writer, statusCode, "User created successfully.");
+                            HTTPResponse.Response(writer, statusCode, "User created successfully.");
                             break;
 
                         case 400:
@@ -109,7 +108,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     switch (statusCode)
                     {
                         case 200:
-                            HTTPResponse.Response(writer, statusCode, "Login successful.");
+                            TokenManagement.SendTokenToClient(writer, statusCode, "Login successful.", token);
                             break;
 
                         case 400:

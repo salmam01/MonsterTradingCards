@@ -11,7 +11,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     public class UserManagement
     {
         //  Method that handles registering a new user
-        public static (int, string) Register(Dictionary<string, string> request)
+        public static int Register(Dictionary<string, string> request)
         {
             try
             {
@@ -22,49 +22,40 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrWhiteSpace(password))
                 {
                     Console.WriteLine("Username or Password empty.");
-                    return (400, null);
+                    return 400;
                 }
 
                 using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
-                    return (500, null);
+                    return 500;
                 }
                 if (CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User already exists.");
-                    return (409, null);
+                    return 409;
                 }
                 Console.WriteLine("Connection successfully established with Database.");
 
-                string token = TokenManagement.GenerateToken(username);
-                if(token == null)
-                {
-                    return (500, token);
-                }
+                using NpgsqlCommand command = new("INSERT INTO player (username, password) VALUES (@username, @password)", connection);
 
-                Console.WriteLine($"Generated token: {token}");
-
-                using NpgsqlCommand command = new("INSERT INTO player (token, username, password) VALUES (@token, @username, @password)", connection);
-
-                command.Parameters.AddWithValue("token", token);
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("password", password);
                 command.ExecuteNonQuery();
                 Console.WriteLine($"{username} has been added to database!");
                 
-                return (201, token);
+                return 201;
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return (500, null);
+                return 500;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
-                return (500, null);
+                return 500;
             }
         }
 
@@ -95,12 +86,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             string username = data["Username"];
             string password = data["Password"];
-            string token = data["Authorization"];
-
-            if(token == null)
-            {
-                return 401;
-            }
 
             // FOR NOW, CHANGE LATER
             //string token = username + "-mtcgToken";
@@ -113,16 +98,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             try
             {
                 using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                if (connection == null)
+                {
+                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    return 500;
+                }
                 if (!CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User doesn't exist.");
                     return 404;
-                }
-
-                if (!TokenManagement.CheckIfTokenIsValid(connection, username, token))
-                {
-                    Console.WriteLine("Invalid Client Authentication Token.");
-                    return 401;
                 }
 
                 using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", connection);
@@ -138,6 +122,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 if (result == password)
                 {
+                    string token = TokenManagement.GenerateToken(username);
+
+                    if (token == null)
+                    {
+                        return 401;
+                    }
+                    Console.WriteLine($"Generated token: {token}");
+
                     Console.WriteLine($"{username} logged in successfully!");
                     return 200;
                 }
@@ -155,5 +147,28 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
             return 401;
         }
+
+        //  Helper method that checks if a user has admin priviledges
+        public static bool AdminCheck(string username)
+        {
+            using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+            if (connection == null)
+            {
+                Console.WriteLine($"Connection failed. Status: {connection.State}");
+                return false;
+            }
+
+            using NpgsqlCommand command = new("SELECT @username FROM player WHERE @username = admin");
+            command.Parameters.AddWithValue("username", username);
+            object resultObj = command.ExecuteScalar();
+
+            if (resultObj == null)
+            {
+                return false;
+            }
+            return true;
+
+        }
+
     }
 }
