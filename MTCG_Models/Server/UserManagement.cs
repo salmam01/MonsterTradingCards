@@ -21,7 +21,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 //  Can make this a method
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrWhiteSpace(password))
                 {
-                    Console.WriteLine("Username or Password empty.");
+                    Console.WriteLine("Username or Password are empty.");
                     return 400;
                 }
 
@@ -87,12 +87,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             string username = data["Username"];
             string password = data["Password"];
 
-            // FOR NOW, CHANGE LATER
-            //string token = username + "-mtcgToken";
-
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                Console.WriteLine("Unauthorized: Missing Authentication Token.");
+                Console.WriteLine($"Wrong Username or Password: {username}");
                 return 400;
             }
             try
@@ -128,9 +125,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     {
                         return 401;
                     }
-                    Console.WriteLine($"Generated token: {token}");
 
-                    Console.WriteLine($"{username} logged in successfully!");
+                    Console.WriteLine($"{username} logged in with {token} successfully!");
                     return 200;
                 }
             }
@@ -151,22 +147,35 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         //  Helper method that checks if a user has admin priviledges
         public static bool AdminCheck(string username)
         {
-            using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
-            if (connection == null)
+            try
             {
-                Console.WriteLine($"Connection failed. Status: {connection.State}");
-                return false;
+                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                if (connection == null)
+                {
+                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    return false;
+                }
+
+                using NpgsqlCommand command = new("SELECT @username FROM player WHERE @username = admin");
+                command.Parameters.AddWithValue("username", username);
+                object resultObj = command.ExecuteScalar();
+
+                if (resultObj == null)
+                {
+                    return false;
+                }
+                return true;
             }
-
-            using NpgsqlCommand command = new("SELECT @username FROM player WHERE @username = admin");
-            command.Parameters.AddWithValue("username", username);
-            object resultObj = command.ExecuteScalar();
-
-            if (resultObj == null)
+            catch(NpgsqlException e)
             {
-                return false;
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return 500;
             }
-            return true;
+            catch(Exception e)
+            {
+                Console.WriteLine($"Error occured during Admin Check: {e.Message}");
+                return 500;
+            }
 
         }
 

@@ -1,4 +1,5 @@
-﻿using Npgsql;
+﻿using MonsterTradingCardsGame.MTCG_Models.Database;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,10 +17,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return username + "-mtcgToken";
         }
 
-        public static bool CheckIfTokenIsValid(NpgsqlConnection connection, string username, string token)
+        public static bool CheckIfTokenIsValid(string username, string token)
         {
             try
             {
+                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                if (connection == null)
+                {
+                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    return false;
+                }
+
                 using NpgsqlCommand command = new("SELECT @username FROM player WHERE token = @token", connection);
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("token", token);

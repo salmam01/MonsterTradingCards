@@ -129,6 +129,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     }
                     break;
 
+                case "/packages":
+                    if (TokenManagement.CheckIfTokenIsValid(request["Username"], token))
+                    {
+                        //  To be implemented
+                    }
+                    break;
+
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Path invalid.");
