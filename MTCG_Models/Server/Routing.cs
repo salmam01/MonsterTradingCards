@@ -25,17 +25,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     break;
 
                 case "PUT":
-                    //  Code will be implemented later
-                    HTTPResponse.Response(writer, 405, "Method not supported");
+                    PutRequestHandler(writer, request);
+                    HTTPResponse.Response(writer, 405);
                     break;
 
                 case "DELETE":
-                    //  Code will be implemented later
-                    HTTPResponse.Response(writer, 405, "Method not supported");
+                    DeleteRequestHandler(writer, request);
+                    HTTPResponse.Response(writer, 405);
                     break;
 
                 default:
-                    HTTPResponse.Response(writer, 405, "Method not supported");
+                    HTTPResponse.Response(writer, 405);
                     break;
             }
         }
@@ -49,12 +49,20 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             switch (path)
             {
                 case "/":
-                    HTTPResponse.Response(writer, 200, "Welcome to Monster Trading Cards Game!");
+                    HTTPResponse.Response(writer, 200);
+                    break;
+
+                case "/cards":
+                    //  To be implemented
+                    break;
+
+                case "/deck":
+                    //  To be implemented
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
+                    HTTPResponse.Response(writer, 404);
                     break;
             }
         }
@@ -67,7 +75,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
-            string token = null;
+            string token = "";
             switch (path)
             {
                 //  API-Endpoint for sign up
@@ -75,27 +83,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                     Console.WriteLine($"Redirecting to {path}.");
                     statusCode = UserManagement.Register(request);
+
                     Console.WriteLine($"Status: {statusCode}");
-
-                    switch(statusCode)
-                    {
-                        case 201:
-                            HTTPResponse.Response(writer, statusCode, "User created successfully.");
-                            break;
-
-                        case 400:
-                            HTTPResponse.Response(writer, statusCode, "Username and password are required.");
-                            break;
-
-                        case 409:
-                            HTTPResponse.Response(writer, statusCode, "Username already exists.");
-                            break;
-
-                        default:
-                            HTTPResponse.Response(writer, statusCode, "Internal Server error occured.");
-                            break;
-                    }
-
+                    HTTPResponse.Response(writer, statusCode);
                     break;
 
                 //  API-Endpoint for login
@@ -103,30 +93,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                     Console.WriteLine($"Redirecting to {path}.");
                     statusCode = UserManagement.Login(request);
+
                     Console.WriteLine(statusCode);
-
-                    switch (statusCode)
-                    {
-                        case 200:
-                            TokenManagement.SendTokenToClient(writer, statusCode, "Login successful.", token);
-                            break;
-
-                        case 400:
-                            HTTPResponse.Response(writer, statusCode, "Username or Password cannot be empty.");
-                            break;
-
-                        case 401:
-                            HTTPResponse.Response(writer, statusCode, "Invalid Client Authentication Token.");
-                            break;
-
-                        case 404:
-                            HTTPResponse.Response(writer, statusCode, "Incorrect Username or Password.");
-                            break;
-
-                        default:
-                            HTTPResponse.Response(writer, statusCode, "Internal Server Error occured.");
-                            break;
-                    }
+                    HTTPResponse.Response(writer, statusCode);
                     break;
 
                 case "/packages":
@@ -136,12 +105,56 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     }
                     break;
 
+                case "/transactions":
+                    break;
+
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse.Response(writer, 404, "Invalid HTTP Request Path");
+                    HTTPResponse.Response(writer, 404);
                     break;
             }
+        }
+
+        public static void PutRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        {
+            string path = request["Path"];
+            Console.WriteLine($"Handling POST Request for {path}...");
+
+            int statusCode;
+            string token = null;
+
+            switch (path)
+            {
+                case "/deck":
+                    break;
+
+                default:
+                    Console.WriteLine("Path invalid.");
+                    HTTPResponse.Response(writer, 404);
+                    break;
+            }
+        }
+
+        public static void DeleteRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        {
+            string path = request["Path"];
+            Console.WriteLine($"Handling POST Request for {path}...");
+
+            int statusCode;
+            string token = null;
+
+            switch (path)
+            {
+                case "/deck":
+                    break;
+
+                default:
+                    Console.WriteLine("Path invalid.");
+                    HTTPResponse.Response(writer, 404);
+                    break;
+            }
+
         }
 
     }

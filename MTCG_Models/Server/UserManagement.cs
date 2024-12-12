@@ -59,6 +59,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
+        //  Helper method to check if a username is in the database
         public static bool CheckIfUserExists(NpgsqlConnection connection, string username)
         {
             try
@@ -169,12 +170,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch(NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return 500;
+                return false;
             }
             catch(Exception e)
             {
                 Console.WriteLine($"Error occured during Admin Check: {e.Message}");
-                return 500;
+                return false;
             }
 
         }

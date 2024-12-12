@@ -15,10 +15,13 @@ using MonsterTradingCardsGame.MTCG_Models.Database;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
-    //-------------------------------------------------------->MISSING MORE ERROR HANDLING FOR REQUEST PARSING<---------------------------------------------------------------
+    //-------------------------------------------------------->MISSING MORE ERROR HANDLING FOR REQUEST PARSING<---------------------------------------------------------------    
+    //  Missing concurrency implementation
+
     public class Server
     {
         private TcpListener _listener;
+        public bool IsRunning { get; set; } = true;
 
         public Server(string url)
         {
@@ -46,10 +49,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch (SocketException e)
             {
                 Console.WriteLine($"SocketException: {e}");
+                IsRunning = false;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                IsRunning = false;
             }
             finally
             {
@@ -58,7 +63,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles Client Requests
-        public static void RequestHandler(TcpClient client)
+        public void RequestHandler(TcpClient client)
         {
             // Get a network stream object for reading from and writing to the client
             using NetworkStream stream = client.GetStream();
@@ -69,24 +74,38 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             try
             {
                 int bytesRead;
-                while ((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
+                while (IsRunning)
                 {
-                    // Translate data bytes to an ASCII string.
-                    request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                    Console.WriteLine($"Received:\n {request}");
-
-                    Dictionary<string, string> requestData = new();
-                    requestData = Parser.ParseRequest(writer, request);
-                    if(requestData == null)
+                    if((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
                     {
-                        HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
-                        continue;
+                        // Translate data bytes to an ASCII string.
+                        request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
+                        Console.WriteLine($"Received:\n {request}");
+
+                        Dictionary<string, string> requestData = new();
+                        requestData = Parser.ParseRequest(writer, request);
+                        if(requestData == null)
+                        {
+                            HTTPResponse.Response(writer, 400);
+                            continue;
+                        }
+
+                        Routing.Router(writer, requestData);
+
+                        writer.Flush();
                     }
-
-                    Routing.Router(writer, requestData);
-
-                    writer.Flush();
+                    
                 }
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"IOException: {ex.Message}");
+                IsRunning = false;
+            }
+            catch (OutOfMemoryException ex)
+            {
+                Console.WriteLine($"OutOfMemoryException: {ex.Message}");
+                IsRunning = false;
             }
             catch (Exception e)
             {
@@ -98,5 +117,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 client.Close();
             }
         }
+
     }
 }

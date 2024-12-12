@@ -22,7 +22,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             if (lines.Length == 0)
             {
                 Console.WriteLine("Malformed Request Syntax.");
-                HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
+                HTTPResponse.Response(writer, 400);  
+                //HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
                 return requestData;
             }
 
@@ -53,7 +54,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             string bodyStr = string.Join("\r\n", lines.Skip(i).ToArray());
             if (string.IsNullOrWhiteSpace(bodyStr))
             {
-                HTTPResponse.Response(writer, 400, "Request Body is empty");
+                //HTTPResponse.Response(writer, 400, "Request Body is empty");
+                HTTPResponse.Response(writer, 400);
                 return requestData;
             }
 
@@ -76,13 +78,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch (JsonException e)
             {
                 Console.WriteLine("An error occured during Deserialization: " + e.Message);
-                HTTPResponse.Response(writer, 400, "An error occured during Deserialization");
+                HTTPResponse.Response(writer, 400);
+                //HTTPResponse.Response(writer, 400, "An error occured during Deserialization");
                 throw;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Parsing request body failed: " + e.Message);
-                HTTPResponse.Response(writer, 400, "Parsing request body failed");
+                HTTPResponse.Response(writer, 400);
+                //HTTPResponse.Response(writer, 400, "Parsing request body failed");
                 throw;
             }
         }
