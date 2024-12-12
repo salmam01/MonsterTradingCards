@@ -38,7 +38,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 _listener.Start();
                 Console.WriteLine("Waiting for a connection...");
 
-                while (true)
+                while (IsRunning)
                 {
                     using TcpClient client = _listener.AcceptTcpClient();
                     Console.WriteLine("\nNew client connected!");
@@ -67,33 +67,38 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             // Get a network stream object for reading from and writing to the client
             using NetworkStream stream = client.GetStream();
-            StreamWriter writer = new(stream);
-            byte[] bytes = new byte[1024];
+            using StreamWriter writer = new(stream);
+            using StreamReader reader = new StreamReader(stream);
+
+            //byte[] bytes = new byte[1024];
             string request;
+            string response;
 
             try
             {
                 int bytesRead;
-                while (IsRunning)
+                while (client.Connected)
                 {
-                    if((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    // Translate data bytes to an ASCII string.
+                    //request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
+                    if(!stream.DataAvailable)
                     {
-                        // Translate data bytes to an ASCII string.
-                        request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                        Console.WriteLine($"Received:\n {request}");
-
-                        Dictionary<string, string> requestData = new();
-                        requestData = Parser.ParseRequest(writer, request);
-                        if(requestData == null)
-                        {
-                            HTTPResponse.Response(writer, 400);
-                            continue;
-                        }
-
-                        Routing.Router(writer, requestData);
-
-                        writer.Flush();
+                        Thread.Sleep(10);
+                        continue;
                     }
+                    request = reader.ReadLine();
+                    if (!Parser.CheckIfValidString(request))
+                    {
+                        Console.WriteLine("Client sent an empty request.");
+                        reader.Close();
+                        break;
+                    }
+
+                    Console.WriteLine($"Received:\n {request}");
+
+                    Router.HandleRequest(writer, request);
+
+                    writer.Flush();
                     
                 }
             }

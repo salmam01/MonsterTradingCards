@@ -19,9 +19,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 string password = request["Password"];
 
                 //  Can make this a method
-                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrWhiteSpace(password))
+                if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
                 {
-                    Console.WriteLine("Username or Password are empty.");
+                    Console.WriteLine("Username or Password is empty.");
                     return 400;
                 }
 
@@ -88,9 +88,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             string username = data["Username"];
             string password = data["Password"];
 
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
             {
-                Console.WriteLine($"Wrong Username or Password: {username}");
+                Console.WriteLine("Username or Password is empty.");
                 return 400;
             }
             try

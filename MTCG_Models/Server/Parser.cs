@@ -52,7 +52,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             i++;
 
             string bodyStr = string.Join("\r\n", lines.Skip(i).ToArray());
-            if (string.IsNullOrWhiteSpace(bodyStr))
+            if (CheckIfValidString(bodyStr))
             {
                 //HTTPResponse.Response(writer, 400, "Request Body is empty");
                 HTTPResponse.Response(writer, 400);
@@ -89,6 +89,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 //HTTPResponse.Response(writer, 400, "Parsing request body failed");
                 throw;
             }
+        }
+
+        //  Helper method to check for an empty string
+        public static bool CheckIfValidString(string str)
+        {
+            if (string.IsNullOrEmpty(str) || string.IsNullOrWhiteSpace(str) || str.Length == 0)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

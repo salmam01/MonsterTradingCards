@@ -24,10 +24,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
                 if (connection == null)
                 {
-                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    Console.WriteLine("Connection failed.");
                     return false;
                 }
 
+                //  Still don't understand prepared statements lol
                 using NpgsqlCommand command = new("SELECT @username FROM player WHERE token = @token", connection);
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("token", token);
@@ -55,8 +56,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             string response = JsonSerializer.Serialize(new
             {
-                message = message,
-                token = token
+                message,
+                token
             });
 
             writer.WriteLine($"HTTP/1.1 {statusCode}");

@@ -3,12 +3,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class HTTPResponse
     {
+        public HTTPResponse(int statusCode, string status, string message) 
+        {
+            string header = $"HTTP/1.1 {statusCode} {status}";
+            string response = JsonSerializer.Serialize(new
+            {
+                message
+            });
+        }
+
         //  Method that is responsible for handling the correct HTTP status messages
         public static void Response(StreamWriter writer, int statusCode)
         {

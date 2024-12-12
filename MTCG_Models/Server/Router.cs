@@ -2,18 +2,32 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
-    public class Routing
+    public class Router
     {
         //  Method that redirects users depending on the HTTP method
-        public static void Router(StreamWriter writer, Dictionary<string, string> request)
+        public static (HTTPResponse, bool) HandleRequest(StreamWriter writer, string request)
         {
-            string method = request["Method"];
+            Dictionary<string, string> requestData = Parser.ParseRequest(writer, request);
 
+            if (requestData == null)
+            {
+                HTTPResponse.Response(writer, 400);
+                return (null, false);
+            }
+
+            MethodHandler(writer, requestData);
+            return (null, true);
+        }
+
+        public static void MethodHandler(StreamWriter writer, Dictionary<string, string> request)
+        {
+            string method = request["method"];
             switch (method)
             {
                 case "GET":
