@@ -1,0 +1,179 @@
+Curl Script for Testing:
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"    #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}" #login
+
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"  #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"   #login
+
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"  #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"   #login
+
+Error Testing:
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"\"}" 
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\" \"}"
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Wong\"}" 
+
+
+Run The Docker Container:
+docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtcg1234 -e POSTGRES_DB=mtcg_database -p 5432:5432 -d postgres
+docker exec -it mtcg_container bash
+psql -U salma -d mtcg_database
+
+Create The Docker Postgres Container:
+docker run --name MTCG_Container -e POSTGRES_USER=toukage -e POSTGRES_PASSWORD=mtcgserver -e POSTGRES_DB=MTCG_DB -p 5432:5432 -d postgres
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Create database :
+MTCG Database
+
+make sure to change the username and passsword and save it somewhere!! forgetting it is bad!!!!, you can pick the container and db name yourself.!
+
+docker run --name MTCG_Container -e POSTGRES_USER=toukage -e POSTGRES_PASSWORD=mtcgserver -e POSTGRES_DB=MTCG_DB -p 5432:5432 -d postgres
+
+Acess database:
+write this to access your container:
+
+docker exec -it MTCG_Container bash
+
+and afterwars write this to access your database:
+
+psql -U toukage -d MTCG_DB
+
+
+Sql Statements for User:
+
+Create User table:
+CREATE TABLE Users (
+	id SERIAL PRIMARY KEY,
+	username VARCHAR(50) UNIQUE,
+	password VARCHAR(255),
+	elo INT DEFAULT 100,
+	coins INT DEFAULT 0,
+	token VARCHAR(255)
+);
+
+
+Insert User :
+INSERT INTO Users (username, password)
+VALUES ('testuser', 'testpassword');
+
+
+Look for User:
+SELECT * FROM Users WHERE username = 'testuser';
+
+
+Check a users Token:
+SELECT * FROM Users
+WHERE token = 'rigby-mtcgToken';
+
+
+Update User:
+
+Username:
+UPDATE Users
+SET username = 'newuser'
+WHERE username = 'testuser';
+
+Password:
+UPDATE Users
+SET password = 'newpassword'
+WHERE username = 'newuser';
+
+Elo - win:
+UPDATE Users
+SET elo = elo + 5
+WHERE id = 1;
+
+Elo - loss:
+UPDATE Users
+SET elo = elo - 5
+WHERE id = 1;
+
+Coins:
+UPDATE Users
+SET coins = coins + 100
+WHERE id = 1;
+
+
+Delete User:
+
+DELETE FROM Users WHERE username = 'testuser';
+
+Token for Users
+table that saves tokens based on usernames, user_sessions
+
+Token:
+UPDATE Users
+SET token = 'newuser-mtcgToken'
+WHERE id = 1;
+
+Reset Token:
+UPDATE Users
+SET token = NULL
+WHERE id = 1;
+
+
+Sql Statements for Cards:
+
+Create Cards Table:
+CREATE TABLE Cards (
+    card_id SERIAL PRIMARY KEY,
+    name VARCHAR(50),
+    damage INT,
+    card_type VARCHAR(50),
+    user_id INT,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id) REFERENCES Users(id)
+);
+
+See Cards :
+See all Cards for a User:
+SELECT * FROM Cards WHERE user_id = 1;
+
+Add Cards:
+INSERT INTO Cards (name, damage, card_type, user_id)
+VALUES ('Fire Dragon', 50, 'Fire', 1);
+
+Edit Cards:
+UPDATE Cards
+SET damage = 55
+WHERE card_id = 1;
+
+Delete Cards
+DELETE FROM Cards WHERE card_id = 1;
+
+Trade Cards between Users:
+UPDATE Cards
+SET user_id = 2
+WHERE card_id = 1 AND user_id = 1;
+
+
+Fetch multiple Tables info:
+
+Fetch Users and their Cards
+SELECT Users.username, Cards.name, Cards.damage, Cards.card_type
+FROM Users
+JOIN Cards ON Users.id = Cards.user_id;
+
+Fetch a Users Cards:
+SELECT name, damage, card_type
+FROM Cards
+WHERE user_id = 1;  -- Replace '1' with the user id
+
+Fetch users sorted ELO (ScoreBoard):
+SELECT username, elo
+FROM Users
+ORDER BY elo DESC;
+
+Fetch a user with all their cards and stats:
+SELECT Users.username, Users.elo, Users.coins, [Cards.name](<http://cards.name/>), Cards.damage, Cards.card_type
+FROM Users
+LEFT JOIN Cards ON [Users.id](<http://users.id/>) = Cards.user_id;
+
+Delete all cards for a user
+for when u delete a user :
+DELETE FROM Cards
+WHERE user_id = 1;  -- Replace '1' with the user id

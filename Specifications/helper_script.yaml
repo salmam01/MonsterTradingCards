@@ -1,0 +1,29 @@
+Curl Scripts for Testing:
+
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"        #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"     #login
+
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"      #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"   #login
+
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"          #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"       #login
+
+Error Testing:
+    
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"\"}" 
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\" \"}"
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Wong\"}" 
+
+
+Run the Docker Container:
+docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtcg1234 -e POSTGRES_DB=mtcg_database -p 5432:5432 -d postgres
+
+Change Anything inside the Database:
+docker exec -it mtcg_container bash
+psql -U salma -d mtcg_database
+
+Create the Docker Postgres Container:
+docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtcg1234 -e POSTGRES_DB=mtcg_database -p 5432:5432 -d postgres
