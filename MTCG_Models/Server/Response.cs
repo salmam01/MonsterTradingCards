@@ -11,14 +11,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class Response
     {
+        private readonly int _statusCode;
         private readonly string _status;
         private readonly string _contentType;
         private readonly string _message;
 
-        public Response(int statusCode, string contentType, string message)
+        public Response(int statusCode, string message)
         { 
-            _status = HTTPResponse.GetHeader(statusCode);
-            _contentType = $"Content-Type: {contentType}\r\n";
+            _statusCode = statusCode;
+            _status = HTTPResponse.GetHeader(_statusCode);
+            _contentType = $"Content-Type: application/json\r\n";
             _message = JsonSerializer.Serialize(new
             {
                 message
@@ -30,5 +32,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return $"{_status}\r\n{_contentType}\r\n{_message}";
         }
 
+        public bool CheckIfUserError()
+        {
+            return _statusCode >= 400 && _statusCode < 500;
+        }
+
+        public bool CheckIfServerError()
+        {
+            return _statusCode >= 500;
+        }
     }
 }

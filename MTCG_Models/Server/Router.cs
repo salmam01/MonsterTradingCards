@@ -12,30 +12,31 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     {
         private readonly Dictionary<string, string> _request;
         private Response _response;
+        private readonly UserManagement _userManagement;
+
         public Router(string request)
         {
             Parser parser = new(request);
             _request = parser.ParseRequest();
+            _userManagement = new UserManagement();
         }
 
         //  Method that redirects users depending on the HTTP method
         public Response HandleRequest()
         {
-            string contentType = "application/json";
+            MethodHandler();
 
             if (_request == null)
             {
-                
-                return _response = new Response(400, contentType, "Bad Request");;
-            }
-
-            MethodHandler();
+                return _response = new Response(400, "Bad Request");
+            }                        
             return _response;
         }
 
-        public Response MethodHandler()
+        public void MethodHandler()
         {
             string method = _request["method"];
+
             switch (method)
             {
                 case "GET":
@@ -48,22 +49,20 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 case "PUT":
                     PutRequestHandler();
-                    //HTTPResponse.Response(writer, 405);
                     break;
 
                 case "DELETE":
                     DeleteRequestHandler();
-                    //HTTPResponse.Response(writer, 405);
                     break;
 
                 default:
-                    //HTTPResponse.Response(writer, 405);
+                    _response = new(405, "Method not supported.");
                     break;
             }
         }
 
         //  Method that handles GET Requests
-        public Response GetRequestHandler()
+        public void GetRequestHandler()
         {
             string path = _request["Path"];
             Console.WriteLine($"Handling GET Request for {path}...");
@@ -71,7 +70,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             switch (path)
             {
                 case "/":
-                    //HTTPResponse.Response(writer, 200);
+                    _response = new(200, "Welcome to Monster Trading Cards!");
                     break;
 
                 case "/cards":
@@ -84,40 +83,35 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    //HTTPResponse.Response(writer, 404);
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path."); 
                     break;
             }
         }
 
-        //  REWORK THIS SHIT PLS
         //  Method that handles POST Requests
-        public Response PostRequestHandler()
+        public void PostRequestHandler()
         {
             string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
+            string message;
             string token = "";
             switch (path)
             {
                 //  API-Endpoint for sign up
                 case "/users":
-
-                    Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = UserManagement.Register(_request);
-
-                    Console.WriteLine($"Status: {statusCode}");
-                    //HTTPResponse.Response(writer, statusCode);
+                    (statusCode, message) = _userManagement.Register(_request);
+                    Console.WriteLine($"Status: {statusCode}, {message}");
+                    _response = new(statusCode, message);
                     break;
 
                 //  API-Endpoint for login
                 case "/sessions":
-
-                    Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = UserManagement.Login(_request);
-
-                    Console.WriteLine(statusCode);
-                    //HTTPResponse.Response(writer, statusCode);
+                    (statusCode, message) = _userManagement.Login(_request);
+                    Console.WriteLine($"Status: {statusCode}, {message}");
+                    _response = new(statusCode, message);
                     break;
 
                 case "/packages":
@@ -125,35 +119,42 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     {
                         //  To be implemented
                     }
+
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
 
                 case "/transactions":
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    Console.WriteLine("Path invalid.");
-                    //HTTPResponse.Response(writer, 404);
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
             }
         }
 
+        //  PUT and DELETE will be implemented later
         public void PutRequestHandler()
         {
             string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            int statusCode;
             string token = null;
 
             switch (path)
             {
                 case "/deck":
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
 
                 default:
-                    Console.WriteLine("Path invalid.");
-                    //HTTPResponse.Response(writer, 404);
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
             }
         }
@@ -163,21 +164,21 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            int statusCode;
             string token = null;
 
             switch (path)
             {
                 case "/deck":
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
 
                 default:
-                    Console.WriteLine("Path invalid.");
-                    //HTTPResponse.Response(writer, 404);
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
                     break;
             }
 
         }
-
     }
 }

@@ -10,15 +10,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class UserManagement
     {
-        private DatabaseConnection _databaseConnection;
+        private DatabaseConnection _dbConnection;
 
         public UserManagement()
         {
-            _databaseConnection = new DatabaseConnection();
+            _dbConnection = new DatabaseConnection();
         }
 
         //  Method that handles registering a new user
-        public int Register(Dictionary<string, string> request)
+        public (int, string) Register(Dictionary<string, string> request)
         {
             try
             {
@@ -29,19 +29,19 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
                 {
                     Console.WriteLine("Username or Password is empty.");
-                    return 400;
+                    return (400, "Username or Password is empty.");
                 }
 
-                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
-                    return 500;
+                    return (500, "Internal Server Error occured.");
                 }
                 if (CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User already exists.");
-                    return 409;
+                    return (409, "User already exists.");
                 }
                 Console.WriteLine("Connection successfully established with Database.");
 
@@ -52,17 +52,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 command.ExecuteNonQuery();
                 Console.WriteLine($"{username} has been added to database!");
                 
-                return 201;
+                return (201, $"{username} signed up successfully! Please login to proceed.");
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return 500;
+                return (500, "Internal Server Error occured.");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
-                return 500;
+                return (500, "Internal Server Error occured.");
             }
         }
 
@@ -90,7 +90,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles login from already registered Users
-        public int Login(Dictionary<string, string> data)
+        public (int, string) Login(Dictionary<string, string> data)
         {
             string username = data["Username"];
             string password = data["Password"];
@@ -98,20 +98,20 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
             {
                 Console.WriteLine("Username or Password is empty.");
-                return 400;
+                return (400, "Username or Password is empty.");
             }
             try
             {
-                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
-                    return 500;
+                    return (500, "Internal Server Error occured.");
                 }
                 if (!CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User doesn't exist.");
-                    return 404;
+                    return (401, "Incorrect Username or Password.");
                 }
 
                 using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", connection);
@@ -120,7 +120,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 if (resultObj == null)
                 {
-                    return 404;
+                    return (401, "Incorrect Username or Password.");
                 }
 
                 string result = resultObj?.ToString();
@@ -131,25 +131,25 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                     if (token == null)
                     {
-                        return 401;
+                        return (500, "Internal Server Error occured.");
                     }
 
                     Console.WriteLine($"{username} logged in with {token} successfully!");
-                    return 200;
+                    return (200, $"{username} logged in successfully!");
                 }
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return 500;
+                return (500, "Internal Server Error occured.");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during login: {e.Message}");
-                return 500;
+                return (500, "Internal Server Error occured.");
             }
 
-            return 401;
+            return (401, "Incorrect Username or Password.");
         }
 
         //  Helper method that checks if a user has admin priviledges
@@ -157,7 +157,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             try
             {
-                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");

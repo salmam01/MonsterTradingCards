@@ -21,7 +21,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             try
             {
-                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                DatabaseConnection dbConnection = new DatabaseConnection();
+                using NpgsqlConnection connection = dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine("Connection failed.");

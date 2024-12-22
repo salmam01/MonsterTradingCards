@@ -107,7 +107,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                     writer.Write(response);
                     writer.Flush();
-                    
+
+                    if(response.CheckIfServerError())
+                    {
+                        Console.WriteLine("Initiating Server Shutdown ...");
+                        IsRunning = false;
+                    }
                 }
             }
             catch (IOException ex)
