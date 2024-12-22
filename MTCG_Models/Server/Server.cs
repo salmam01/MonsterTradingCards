@@ -22,6 +22,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     {
         private TcpListener _listener;
         public bool IsRunning { get; set; } = true;
+        public bool _clientConnection = true;
 
         public Server(string url)
         {
@@ -72,13 +73,18 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
             //byte[] bytes = new byte[1024];
             string request;
-            string response;
 
             try
             {
                 int bytesRead;
-                while (client.Connected)
+                while (_clientConnection)
                 {
+                    if(!client.Connected)
+                    {
+                        _clientConnection = false;
+                        Console.WriteLine("Client has closed the connection.");
+                    }
+
                     // Translate data bytes to an ASCII string.
                     //request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
                     if(!stream.DataAvailable)
@@ -96,8 +102,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                     Console.WriteLine($"Received:\n {request}");
 
-                    Router.HandleRequest(writer, request);
+                    Router router = new(request);
+                    var response = router.HandleRequest();
 
+                    writer.Write(response);
                     writer.Flush();
                     
                 }

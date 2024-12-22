@@ -9,15 +9,25 @@ namespace MonsterTradingCardsGame.MTCG_Models.Database
 {
     public class DatabaseConnection
     {
-        public static NpgsqlConnection ConnectToDatabase()
-        {
-            string host = "localhost";
-            string port = "5432";
-            string username = "salma";
-            string password = "mtcg1234";
-            string database = "mtcg_database";
+        private readonly string _host;
+        private readonly string _port;
+        private readonly string _username;    
+        private readonly string _password;
+        private readonly string _database;
 
-            string connectionString = $"Host={host};Port={port};Username={username};Password={password};Database={database}";
+        public DatabaseConnection()
+        {
+            _host = "localhost";
+            _port = "5432";
+            _username = "salma";
+            _password = "mtcg1234";
+            _database = "mtcg_database";
+        }
+
+        public NpgsqlConnection OpenConnection()
+        {
+
+            string connectionString = $"Host={_host};Port={_port};Username={_username};Password={_password};Database={_database}";
 
             try
             {

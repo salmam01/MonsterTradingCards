@@ -12,17 +12,23 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class Parser
     {
-        public static Dictionary<string, string> ParseRequest(StreamWriter writer, string request)
+        private readonly string _request;
+
+        public Parser(string request)
+        {
+            _request = request;
+        }
+
+        public Dictionary<string, string> ParseRequest()
         {
             //  Split the request string by each line
-            string[] lines = request.Split("\r\n");
+            string[] lines = _request.Split("\r\n");
             Dictionary<string, string> body = new();
             Dictionary<string, string> requestData = new();
 
             if (lines.Length == 0)
             {
                 Console.WriteLine("Malformed Request Syntax.");
-                HTTPResponse.Response(writer, 400);  
                 //HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
                 return requestData;
             }
@@ -33,6 +39,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             string path = firstLine[1].Trim();
             string ver = firstLine[2].Trim();
 
+            //  Magic strings (?)
             requestData["Method"] = method;
             requestData["Path"] = path;
             requestData["HttpVer"] = ver;
@@ -55,11 +62,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             if (CheckIfValidString(bodyStr))
             {
                 //HTTPResponse.Response(writer, 400, "Request Body is empty");
-                HTTPResponse.Response(writer, 400);
                 return requestData;
             }
 
-            body = ParseBody(writer, bodyStr);
+            body = ParseBody(bodyStr);
 
             foreach (var data in body)
             {
@@ -69,7 +75,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return requestData;
         }
 
-        public static Dictionary<string, string> ParseBody(StreamWriter writer, string bodyStr)
+        public static Dictionary<string, string> ParseBody(string bodyStr)
         {
             try
             {
@@ -78,14 +84,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch (JsonException e)
             {
                 Console.WriteLine("An error occured during Deserialization: " + e.Message);
-                HTTPResponse.Response(writer, 400);
                 //HTTPResponse.Response(writer, 400, "An error occured during Deserialization");
                 throw;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Parsing request body failed: " + e.Message);
-                HTTPResponse.Response(writer, 400);
                 //HTTPResponse.Response(writer, 400, "Parsing request body failed");
                 throw;
             }

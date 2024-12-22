@@ -10,60 +10,68 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class Router
     {
-        //  Method that redirects users depending on the HTTP method
-        public static (HTTPResponse, bool) HandleRequest(StreamWriter writer, string request)
+        private readonly Dictionary<string, string> _request;
+        private Response _response;
+        public Router(string request)
         {
-            Dictionary<string, string> requestData = Parser.ParseRequest(writer, request);
-
-            if (requestData == null)
-            {
-                HTTPResponse.Response(writer, 400);
-                return (null, false);
-            }
-
-            MethodHandler(writer, requestData);
-            return (null, true);
+            Parser parser = new(request);
+            _request = parser.ParseRequest();
         }
 
-        public static void MethodHandler(StreamWriter writer, Dictionary<string, string> request)
+        //  Method that redirects users depending on the HTTP method
+        public Response HandleRequest()
         {
-            string method = request["method"];
+            string contentType = "application/json";
+
+            if (_request == null)
+            {
+                
+                return _response = new Response(400, contentType, "Bad Request");;
+            }
+
+            MethodHandler();
+            return _response;
+        }
+
+        public Response MethodHandler()
+        {
+            string method = _request["method"];
             switch (method)
             {
                 case "GET":
-                    GetRequestHandler(writer, request);
+                    GetRequestHandler();
                     break;
 
                 case "POST":
-                    PostRequestHandler(writer, request);
+                    PostRequestHandler();
                     break;
 
                 case "PUT":
-                    PutRequestHandler(writer, request);
-                    HTTPResponse.Response(writer, 405);
+                    PutRequestHandler();
+                    //HTTPResponse.Response(writer, 405);
                     break;
 
                 case "DELETE":
-                    DeleteRequestHandler(writer, request);
-                    HTTPResponse.Response(writer, 405);
+                    DeleteRequestHandler();
+                    //HTTPResponse.Response(writer, 405);
                     break;
 
                 default:
-                    HTTPResponse.Response(writer, 405);
+                    //HTTPResponse.Response(writer, 405);
                     break;
             }
         }
 
         //  Method that handles GET Requests
-        public static void GetRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        public Response GetRequestHandler()
         {
-            string path = request["Path"];
+            string path = _request["Path"];
             Console.WriteLine($"Handling GET Request for {path}...");
 
             switch (path)
             {
                 case "/":
-                    HTTPResponse.Response(writer, 200);
+                    //HTTPResponse.Response(writer, 200);
                     break;
 
                 case "/cards":
@@ -76,16 +84,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
-                    HTTPResponse.Response(writer, 404);
+                    //HTTPResponse.Response(writer, 404);
                     break;
             }
         }
 
         //  REWORK THIS SHIT PLS
         //  Method that handles POST Requests
-        public static void PostRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        public Response PostRequestHandler()
         {
-            string path = request["Path"];
+            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
@@ -96,24 +104,24 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 case "/users":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = UserManagement.Register(request);
+                    statusCode = UserManagement.Register(_request);
 
                     Console.WriteLine($"Status: {statusCode}");
-                    HTTPResponse.Response(writer, statusCode);
+                    //HTTPResponse.Response(writer, statusCode);
                     break;
 
                 //  API-Endpoint for login
                 case "/sessions":
 
                     Console.WriteLine($"Redirecting to {path}.");
-                    statusCode = UserManagement.Login(request);
+                    statusCode = UserManagement.Login(_request);
 
                     Console.WriteLine(statusCode);
-                    HTTPResponse.Response(writer, statusCode);
+                    //HTTPResponse.Response(writer, statusCode);
                     break;
 
                 case "/packages":
-                    if (TokenManagement.CheckIfTokenIsValid(request["Username"], token))
+                    if (TokenManagement.CheckIfTokenIsValid(_request["Username"], token))
                     {
                         //  To be implemented
                     }
@@ -125,14 +133,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse.Response(writer, 404);
+                    //HTTPResponse.Response(writer, 404);
                     break;
             }
         }
 
-        public static void PutRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        public void PutRequestHandler()
         {
-            string path = request["Path"];
+            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
@@ -145,14 +153,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse.Response(writer, 404);
+                    //HTTPResponse.Response(writer, 404);
                     break;
             }
         }
 
-        public static void DeleteRequestHandler(StreamWriter writer, Dictionary<string, string> request)
+        public void DeleteRequestHandler()
         {
-            string path = request["Path"];
+            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
@@ -165,7 +173,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 default:
                     Console.WriteLine("Path invalid.");
-                    HTTPResponse.Response(writer, 404);
+                    //HTTPResponse.Response(writer, 404);
                     break;
             }
 

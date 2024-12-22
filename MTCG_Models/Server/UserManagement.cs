@@ -10,8 +10,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class UserManagement
     {
+        private DatabaseConnection _databaseConnection;
+
+        public UserManagement()
+        {
+            _databaseConnection = new DatabaseConnection();
+        }
+
         //  Method that handles registering a new user
-        public static int Register(Dictionary<string, string> request)
+        public int Register(Dictionary<string, string> request)
         {
             try
             {
@@ -25,7 +32,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     return 400;
                 }
 
-                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
@@ -83,7 +90,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles login from already registered Users
-        public static int Login(Dictionary<string, string> data)
+        public int Login(Dictionary<string, string> data)
         {
             string username = data["Username"];
             string password = data["Password"];
@@ -95,7 +102,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
             try
             {
-                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
@@ -146,11 +153,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Helper method that checks if a user has admin priviledges
-        public static bool AdminCheck(string username)
+        public bool AdminCheck(string username)
         {
             try
             {
-                using NpgsqlConnection connection = DatabaseConnection.ConnectToDatabase();
+                using NpgsqlConnection connection = _databaseConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
