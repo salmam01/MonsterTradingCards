@@ -9,6 +9,9 @@ curl -X POST http://localhost:10001/sessions \ --header "Content-Type: applicati
 curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"          #signup
 curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"       #login
 
+curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Soma\", \"Password\":\"Cruz\"}"         #signup
+curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Soma\", \"Password\":\"Cruz\"}"      #login
+
 Error Testing:
     
 curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"\"}" 

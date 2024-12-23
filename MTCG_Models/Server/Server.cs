@@ -20,9 +20,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
     public class Server
     {
-        private TcpListener _listener;
+        private readonly TcpListener _listener;
         public bool IsRunning { get; set; } = true;
-        public bool _clientConnection = true;
 
         public Server(string url)
         {
@@ -37,13 +36,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             try
             {
                 _listener.Start();
+                Console.WriteLine("Server started.");
                 Console.WriteLine("Waiting for a connection...");
 
                 while (IsRunning)
                 {
                     using TcpClient client = _listener.AcceptTcpClient();
                     Console.WriteLine("\nNew client connected!");
-
+                    //Task.Run(() => HandleClient(client));
                     RequestHandler(client);
                 }
             }
@@ -69,61 +69,43 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             // Get a network stream object for reading from and writing to the client
             using NetworkStream stream = client.GetStream();
             using StreamWriter writer = new(stream);
-            using StreamReader reader = new StreamReader(stream);
-
-            //byte[] bytes = new byte[1024];
-            string request;
+            //using StreamReader reader = new StreamReader(stream);
 
             try
             {
                 int bytesRead;
-                while (_clientConnection)
+                byte[] bytes = new byte[1024];
+                string? request;
+                while (client.Connected)
                 {
-                    if(!client.Connected)
+                    while ((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
                     {
-                        _clientConnection = false;
-                        Console.WriteLine("Client has closed the connection.");
-                    }
+                        // Translate data bytes to an ASCII string.
+                        request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
+                        Console.WriteLine($"Received:\n {request}");
 
-                    // Translate data bytes to an ASCII string.
-                    //request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                    if(!stream.DataAvailable)
-                    {
-                        Thread.Sleep(10);
-                        continue;
-                    }
-                    request = reader.ReadLine();
-                    if (!Parser.CheckIfValidString(request))
-                    {
-                        Console.WriteLine("Client sent an empty request.");
-                        reader.Close();
-                        break;
-                    }
+                        Router router = new(request);
+                        var response = router.RequestHandler();
+                        writer.WriteLine(response.GetResponse());
+                        Console.WriteLine(response.GetResponse());
 
-                    Console.WriteLine($"Received:\n {request}");
-
-                    Router router = new(request);
-                    var response = router.HandleRequest();
-
-                    writer.Write(response);
-                    writer.Flush();
-
-                    if(response.CheckIfServerError())
-                    {
-                        Console.WriteLine("Initiating Server Shutdown ...");
-                        IsRunning = false;
+                        if (response.CheckIfServerError())
+                        {
+                            Console.WriteLine("Server error detected. Initiating shutdown...");
+                            StopServer();
+                            break;
+                        }
+                        writer.Flush();
                     }
                 }
             }
             catch (IOException ex)
             {
                 Console.WriteLine($"IOException: {ex.Message}");
-                IsRunning = false;
             }
             catch (OutOfMemoryException ex)
             {
                 Console.WriteLine($"OutOfMemoryException: {ex.Message}");
-                IsRunning = false;
             }
             catch (Exception e)
             {
@@ -136,5 +118,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
+        public void StopServer()
+        {
+            IsRunning = false;
+            _listener.Stop();
+            Console.WriteLine("Server initiating Shutdown...");
+        }
     }
 }

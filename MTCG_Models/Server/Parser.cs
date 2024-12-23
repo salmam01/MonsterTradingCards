@@ -29,7 +29,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             if (lines.Length == 0)
             {
                 Console.WriteLine("Malformed Request Syntax.");
-                //HTTPResponse.Response(writer, 400, "Malformed Request Syntax.");
                 return requestData;
             }
 
@@ -58,14 +57,21 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
             i++;
 
-            string bodyStr = string.Join("\r\n", lines.Skip(i).ToArray());
-            if (CheckIfValidString(bodyStr))
+            string bodyStr = string.Join("\r\n", lines.Skip(i));
+            bodyStr = bodyStr.Trim();
+
+            if (!CheckIfValidString(bodyStr))
             {
-                //HTTPResponse.Response(writer, 400, "Request Body is empty");
+                Console.WriteLine("Invalid string.");
                 return requestData;
             }
 
             body = ParseBody(bodyStr);
+
+            if(body == null)
+            {
+                return requestData;
+            }
 
             foreach (var data in body)
             {
@@ -75,30 +81,28 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return requestData;
         }
 
-        public static Dictionary<string, string> ParseBody(string bodyStr)
+        public Dictionary<string, string> ParseBody(string bodyStr)
         {
+            Dictionary<string, string> body = new();
             try
             {
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(bodyStr);
+                body = JsonSerializer.Deserialize<Dictionary<string, string>>(bodyStr);
             }
             catch (JsonException e)
             {
                 Console.WriteLine("An error occured during Deserialization: " + e.Message);
-                //HTTPResponse.Response(writer, 400, "An error occured during Deserialization");
-                throw;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Parsing request body failed: " + e.Message);
-                //HTTPResponse.Response(writer, 400, "Parsing request body failed");
-                throw;
             }
+            return body;
         }
 
         //  Helper method to check for an empty string
         public static bool CheckIfValidString(string str)
         {
-            if (string.IsNullOrEmpty(str) || string.IsNullOrWhiteSpace(str) || str.Length == 0)
+            if (string.IsNullOrEmpty(str) || string.IsNullOrWhiteSpace(str) || str.Length <= 0)
             {
                 return false;
             }

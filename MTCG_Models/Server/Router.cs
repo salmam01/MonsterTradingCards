@@ -10,49 +10,57 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class Router
     {
-        private readonly Dictionary<string, string> _request;
+        private Dictionary<string, string> _request;
         private Response _response;
+        private readonly Parser _parser;
         private readonly UserManagement _userManagement;
 
         public Router(string request)
         {
-            Parser parser = new(request);
-            _request = parser.ParseRequest();
+            _parser = new(request);
             _userManagement = new UserManagement();
         }
 
         //  Method that redirects users depending on the HTTP method
-        public Response HandleRequest()
+        public Response RequestHandler()
         {
-            MethodHandler();
-
+            _request = _parser.ParseRequest();
             if (_request == null)
             {
-                return _response = new Response(400, "Bad Request");
-            }                        
+                return _response = new(400, "Malformed Request Syntax.");
+            }
+
+            MethodHandler();
             return _response;
         }
 
         public void MethodHandler()
         {
-            string method = _request["method"];
+            string method, path;
+            if (!_request.ContainsKey("Method") || !_request.ContainsKey("Path"))
+            {
+                _response = new(400, "Request Body is empty.");
+                return;
+            }
+            method = _request["Method"];
+            path = _request["Path"];
 
             switch (method)
             {
                 case "GET":
-                    GetRequestHandler();
+                    GetRequestHandler(path);
                     break;
 
                 case "POST":
-                    PostRequestHandler();
+                    PostRequestHandler(path);
                     break;
 
                 case "PUT":
-                    PutRequestHandler();
+                    PutRequestHandler(path);
                     break;
 
                 case "DELETE":
-                    DeleteRequestHandler();
+                    DeleteRequestHandler(path);
                     break;
 
                 default:
@@ -62,9 +70,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles GET Requests
-        public void GetRequestHandler()
+        public void GetRequestHandler(string path)
         {
-            string path = _request["Path"];
             Console.WriteLine($"Handling GET Request for {path}...");
 
             switch (path)
@@ -90,9 +97,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles POST Requests
-        public void PostRequestHandler()
+        public void PostRequestHandler(string path)
         {
-            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
@@ -103,14 +109,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 //  API-Endpoint for sign up
                 case "/users":
                     (statusCode, message) = _userManagement.Register(_request);
-                    Console.WriteLine($"Status: {statusCode}, {message}");
                     _response = new(statusCode, message);
                     break;
 
                 //  API-Endpoint for login
                 case "/sessions":
                     (statusCode, message) = _userManagement.Login(_request);
-                    Console.WriteLine($"Status: {statusCode}, {message}");
                     _response = new(statusCode, message);
                     break;
 
@@ -138,9 +142,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  PUT and DELETE will be implemented later
-        public void PutRequestHandler()
+        public void PutRequestHandler(string path)
         {
-            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             string token = null;
@@ -159,9 +162,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public void DeleteRequestHandler()
+        public void DeleteRequestHandler(string path)
         {
-            string path = _request["Path"];
             Console.WriteLine($"Handling POST Request for {path}...");
 
             string token = null;
