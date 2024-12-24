@@ -15,13 +15,10 @@ using MonsterTradingCardsGame.MTCG_Models.Database;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
-    //-------------------------------------------------------->MISSING MORE ERROR HANDLING FOR REQUEST PARSING<---------------------------------------------------------------    
-    //  Missing concurrency implementation
-
     public class Server
     {
         private readonly TcpListener _listener;
-        public bool IsRunning { get; set; } = true;
+        private bool _isRunning = true;
 
         public Server(string url)
         {
@@ -31,7 +28,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  This method is the starting point of the server
-        public void StartServer()
+        public async Task StartServer()
         {
             try
             {
@@ -39,64 +36,70 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 Console.WriteLine("Server started.");
                 Console.WriteLine("Waiting for a connection...");
 
-                while (IsRunning)
+                while (_isRunning)
                 {
-                    using TcpClient client = _listener.AcceptTcpClient();
+                    TcpClient client = await _listener.AcceptTcpClientAsync();
                     Console.WriteLine("\nNew client connected!");
-                    //Task.Run(() => HandleClient(client));
-                    RequestHandler(client);
+
+                    _ = RequestHandler(client);
                 }
             }
             catch (SocketException e)
             {
                 Console.WriteLine($"SocketException: {e}");
-                IsRunning = false;
+                StopServer();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                IsRunning = false;
+                StopServer();
             }
             finally
             {
-                _listener.Stop();
+                StopServer();
             }
         }
 
         //  Method that handles Client Requests
-        public void RequestHandler(TcpClient client)
+        public async Task RequestHandler(TcpClient client)
         {
-            // Get a network stream object for reading from and writing to the client
-            using NetworkStream stream = client.GetStream();
-            using StreamWriter writer = new(stream);
-            //using StreamReader reader = new StreamReader(stream);
-
             try
             {
-                int bytesRead;
+                // Get a network stream object for reading from and writing to the client
+                NetworkStream stream = client.GetStream();
+                using StreamWriter writer = new(stream);
                 byte[] bytes = new byte[1024];
-                string? request;
+                int bytesRead;
+                string requestStr;
+
                 while (client.Connected)
                 {
-                    while ((bytesRead = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    bytesRead = await stream.ReadAsync(bytes, 0, bytes.Length);
+                    
+                    if(bytesRead == 0)
                     {
-                        // Translate data bytes to an ASCII string.
-                        request = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                        Console.WriteLine($"Received:\n {request}");
-
-                        Router router = new(request);
-                        var response = router.RequestHandler();
-                        writer.WriteLine(response.GetResponse());
-                        Console.WriteLine(response.GetResponse());
-
-                        if (response.CheckIfServerError())
-                        {
-                            Console.WriteLine("Server error detected. Initiating shutdown...");
-                            StopServer();
-                            break;
-                        }
-                        writer.Flush();
+                        Console.WriteLine("Request is empty, server is closing connection.");
+                        break;
                     }
+
+                    // Translate data bytes to an ASCII string.
+                    requestStr = Encoding.UTF8.GetString(bytes, 0, bytesRead);
+                    Console.WriteLine($"Received:\n {requestStr}");
+
+                    Router router = new(requestStr);
+                    var response = router.RequestHandler();
+
+                    await writer.WriteLineAsync(response.GetResponse());
+                    Console.WriteLine(response.GetResponse());
+
+                    if (response.CheckIfServerError())
+                    {
+                        Console.WriteLine("Server error detected. Initiating shutdown...");
+                        StopServer();
+                        break;
+                    }
+
+                    writer.Flush();
                 }
             }
             catch (IOException ex)
@@ -120,7 +123,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public void StopServer()
         {
-            IsRunning = false;
+            _isRunning = false;
             _listener.Stop();
             Console.WriteLine("Server initiating Shutdown...");
         }

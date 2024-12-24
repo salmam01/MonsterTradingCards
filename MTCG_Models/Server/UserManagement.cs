@@ -18,12 +18,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles registering a new user
-        public (int, string) Register(Dictionary<string, string> request)
+        public (int, string) SignUp(Dictionary<string, string> requestBody)
         {
             try
             {
-                string username = request["Username"];
-                string password = request["Password"];
+                string username = requestBody["Username"];
+                string password = requestBody["Password"];
 
                 //  Can make this a method
                 if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
@@ -90,10 +90,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles login from already registered Users
-        public (int, string) Login(Dictionary<string, string> data)
+        public (int, string) Login(Dictionary<string, string> requestBody)
         {
-            string username = data["Username"];
-            string password = data["Password"];
+            string username = requestBody["Username"];
+            string password = requestBody["Password"];
 
             if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
             {

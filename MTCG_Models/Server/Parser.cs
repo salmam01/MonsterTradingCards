@@ -12,42 +12,58 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class Parser
     {
-        private readonly string _request;
+        private readonly string[] _requestStrLines;
+        private string _bodyStr;
+        private Request _request;
 
-        public Parser(string request)
-        {
-            _request = request;
-        }
-
-        public Dictionary<string, string> ParseRequest()
+        public Parser(string requestStr)
         {
             //  Split the request string by each line
-            string[] lines = _request.Split("\r\n");
-            Dictionary<string, string> body = new();
-            Dictionary<string, string> requestData = new();
+            _requestStrLines = requestStr.Split("\r\n");
+        }
 
-            if (lines.Length == 0)
+        public Request ParseRequest()
+        {
+            if (_requestStrLines.Length == 0)
             {
                 Console.WriteLine("Malformed Request Syntax.");
-                return requestData;
+                return _request;
             }
 
             //  First line of the HTTP request contains the method, path and HTTP version
-            string[] firstLine = lines[0].Split(" ");
-            string method = firstLine[0].Trim();
-            string path = firstLine[1].Trim();
-            string ver = firstLine[2].Trim();
-
-            //  Magic strings (?)
-            requestData["Method"] = method;
-            requestData["Path"] = path;
-            requestData["HttpVer"] = ver;
-
-            //  Split the header into pairs and add them to the dictionary
-            int i = 1;
-            while (i < lines.Length && lines[i] != "")
+            string[] firstLine = _requestStrLines[0].Split(" ");
+            _request = new(firstLine[0].Trim(), firstLine[1].Trim(), firstLine[2].Trim());
+            
+            ParseHeaders();
+            if (_request.GetHeaders() == null)
             {
-                string[] headerParts = lines[i].Split(':', 2);
+                Console.WriteLine("Empty headers.");
+                return _request;
+            }
+            if (!CheckIfValidString(_bodyStr))
+            {
+                Console.WriteLine("Invalid body string.");
+                return _request;
+            }
+
+            ParseBody();
+            if (_request.GetBody() == null)
+            {
+                Console.WriteLine("Empty Body.");
+            }
+
+            return _request;
+        }
+
+        public void ParseHeaders()
+        {
+            //  Split the header into pairs and add them to the dictionary
+            Dictionary<string, string> requestData = new();
+
+            int i = 1;
+            while (i < _requestStrLines.Length && _requestStrLines[i] != "")
+            {
+                string[] headerParts = _requestStrLines[i].Split(':', 2);
 
                 if (headerParts.Length == 2)
                 {
@@ -57,36 +73,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
             i++;
 
-            string bodyStr = string.Join("\r\n", lines.Skip(i));
-            bodyStr = bodyStr.Trim();
-
-            if (!CheckIfValidString(bodyStr))
-            {
-                Console.WriteLine("Invalid string.");
-                return requestData;
-            }
-
-            body = ParseBody(bodyStr);
-
-            if(body == null)
-            {
-                return requestData;
-            }
-
-            foreach (var data in body)
-            {
-                requestData[data.Key] = data.Value;
-            }
-
-            return requestData;
+            _bodyStr = string.Join("\r\n", _requestStrLines.Skip(i));
+            _bodyStr = _bodyStr.Trim();
         }
 
-        public Dictionary<string, string> ParseBody(string bodyStr)
+        public void ParseBody()
         {
-            Dictionary<string, string> body = new();
             try
             {
-                body = JsonSerializer.Deserialize<Dictionary<string, string>>(bodyStr);
+                //  Ignore this warning
+                _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
             }
             catch (JsonException e)
             {
@@ -96,7 +92,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             {
                 Console.WriteLine("Parsing request body failed: " + e.Message);
             }
-            return body;
         }
 
         //  Helper method to check for an empty string
