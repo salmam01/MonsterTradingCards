@@ -10,9 +10,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Frontend
 
         }
 
-        public void Attack(Card enemy)
+        public void SetRandomDamage()
         {
 
+        }
+
+        public void Attack(Card enemy)
+        {
+            /*if(enemy.GetType() == 'M')
+            {
+
+            }*/
         }
     }
 }

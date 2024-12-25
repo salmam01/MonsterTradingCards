@@ -76,26 +76,38 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             Console.WriteLine($"Handling GET Request for {path}...");
 
+            int statusCode;
+            string message;
+
             switch (path)
             {
                 case "/":
-                    _response = new(200, "Welcome to Monster Trading Cards!");
+                    statusCode = 200;
+                    message = "Welcome to Monster Trading Cards!";
                     break;
 
                 case "/cards":
                     //  To be implemented
+                    Console.WriteLine("Invalid path.");
+                    statusCode = 404;
+                    message = "Invalid path.";
                     break;
 
                 case "/deck":
                     //  To be implemented
+                    Console.WriteLine("Invalid path.");
+                    statusCode = 404;
+                    message = "Invalid path.";
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path."); 
+                    statusCode = 404;
+                    message = "Invalid path.";
                     break;
             }
+            _response = new(statusCode, message);
         }
 
         //  Method that handles POST Requests
@@ -104,43 +116,44 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
-            string message;
-            string token = "";
+            string message, token = "";
+            Dictionary<string, string> requestBody = _request.GetBody();
 
             switch (path)
             {
                 //  API-Endpoint for sign up
                 case "/users":
-                    (statusCode, message) = _userManagement.SignUp(_request.GetBody());
-                    _response = new(statusCode, message);
+                    (statusCode, message) = _userManagement.SignUp(requestBody);
                     break;
 
                 //  API-Endpoint for login
                 case "/sessions":
-                    (statusCode, message) = _userManagement.Login(_request.GetBody());
-                    _response = new(statusCode, message);
+                    (statusCode, message, token) = _userManagement.Login(requestBody);
                     break;
 
                 case "/packages":
-                    if (TokenManagement.CheckIfTokenIsValid(_request.GetBody()["Username"], token))
-                    {
-                        //  To be implemented
-                    }
-
+                    (statusCode, message) = _userManagement.CreatePackages(requestBody);
+                    
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
                     break;
 
                 case "/transactions":
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
+                    statusCode = 404;
+                    message = "Invalid path.";
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
+                    statusCode = 404;
+                    message = "Invalid path.";
                     break;
+            }
+            _response = new(statusCode, message);
+            if(Parser.CheckIfValidString(token))
+            {
+                _response.SetToken(token);
             }
         }
 
@@ -149,41 +162,36 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            string token = null;
-
             switch (path)
             {
                 case "/deck":
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
                     break;
 
                 default:
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
                     break;
             }
+
+            _response = new(404, "Invalid path.");
+
         }
 
         public void DeleteRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            string token = null;
-
             switch (path)
             {
                 case "/deck":
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
                     break;
 
                 default:
                     Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
                     break;
             }
-
+            _response = new(404, "Invalid path.");
         }
     }
 }

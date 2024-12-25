@@ -14,22 +14,45 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         private readonly int _statusCode;
         private readonly string _status;
         private readonly string _contentType;
-        private readonly string _message;
+        private string _message;
+        private readonly string _messageStr;
+        private string _token;
 
         public Response(int statusCode, string message)
         { 
             _statusCode = statusCode;
             _status = HTTPResponse.GetHeader(_statusCode);
             _contentType = $"Content-Type: application/json\r\n";
-            _message = JsonSerializer.Serialize(new
-            {
-                message
-            });
+            _messageStr = message;
+        }
+
+        public void SetToken(string token)
+        {
+            _token = token;
         }
 
         public string GetResponse()
         {
+            SetMessage();
             return $"{_status}\r\n{_contentType}\r\n{_message}";
+        }
+        public void SetMessage()
+        {
+            if (Parser.CheckIfValidString(_token))
+            {
+                _message = JsonSerializer.Serialize(new
+                {
+                    message = _messageStr,
+                    token = _token
+                });
+            }
+            else
+            {
+                _message = JsonSerializer.Serialize(new
+                {
+                    message = _messageStr
+                });
+            }
         }
 
         public bool CheckIfUserError()

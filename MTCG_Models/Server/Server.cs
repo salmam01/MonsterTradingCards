@@ -38,7 +38,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 while (_isRunning)
                 {
-                    TcpClient client = await _listener.AcceptTcpClientAsync();
+                    using TcpClient client = await _listener.AcceptTcpClientAsync();
                     Console.WriteLine("\nNew client connected!");
 
                     _ = RequestHandler(client);
@@ -72,35 +72,31 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 int bytesRead;
                 string requestStr;
 
-                while (client.Connected)
+                bytesRead = await stream.ReadAsync(bytes, 0, bytes.Length);
+                // Translate data bytes to an ASCII string.
+                requestStr = Encoding.UTF8.GetString(bytes, 0, bytesRead);
+
+                if(bytesRead <= 0)
                 {
-                    bytesRead = await stream.ReadAsync(bytes, 0, bytes.Length);
-                    
-                    if(bytesRead == 0)
-                    {
-                        Console.WriteLine("Request is empty, server is closing connection.");
-                        break;
-                    }
-
-                    // Translate data bytes to an ASCII string.
-                    requestStr = Encoding.UTF8.GetString(bytes, 0, bytesRead);
-                    Console.WriteLine($"Received:\n {requestStr}");
-
-                    Router router = new(requestStr);
-                    var response = router.RequestHandler();
-
-                    await writer.WriteLineAsync(response.GetResponse());
-                    Console.WriteLine(response.GetResponse());
-
-                    if (response.CheckIfServerError())
-                    {
-                        Console.WriteLine("Server error detected. Initiating shutdown...");
-                        StopServer();
-                        break;
-                    }
-
-                    writer.Flush();
+                    Console.WriteLine("Request is empty, server is closing connection.");
+                    return;
                 }
+
+                Console.WriteLine($"Received:\n {requestStr}");
+
+                Router router = new(requestStr);
+                var response = router.RequestHandler();
+
+                await writer.WriteLineAsync(response.GetResponse());
+                Console.WriteLine($"\nResponse:\n {response.GetResponse()}");
+
+                if (response.CheckIfServerError())
+                {
+                    Console.WriteLine("Server error detected. Initiating shutdown...");
+                    StopServer();
+                }
+
+                writer.Flush();
             }
             catch (IOException ex)
             {

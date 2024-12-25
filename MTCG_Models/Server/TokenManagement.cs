@@ -12,12 +12,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class TokenManagement
     {
-        public static string GenerateToken(string username)
+        public string GenerateToken(string username)
         {
             return username + "-mtcgToken";
         }
 
-        public static bool CheckIfTokenIsValid(string username, string token)
+        public bool CheckIfTokenIsValid(string username, string token)
         {
             try
             {
@@ -29,7 +29,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     return false;
                 }
 
-                //  Still don't understand prepared statements lol
                 using NpgsqlCommand command = new("SELECT @username FROM player WHERE token = @token", connection);
                 command.Parameters.AddWithValue("username", username);
                 command.Parameters.AddWithValue("token", token);
@@ -39,6 +38,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 {
                     return false;
                 }
+
                 return true;
             }
             catch (NpgsqlException e)
@@ -51,20 +51,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 Console.WriteLine($"Error while checking for user: {e.Message}");
                 throw;
             }
-        }
-
-        public static void SendTokenToClient(StreamWriter writer, int statusCode, string message, string token)
-        {
-            string response = JsonSerializer.Serialize(new
-            {
-                message,
-                token
-            });
-
-            writer.WriteLine($"HTTP/1.1 {statusCode}");
-            writer.WriteLine("Content-Type: application/json");
-            writer.WriteLine();
-            writer.WriteLine(response);
         }
     }
 }

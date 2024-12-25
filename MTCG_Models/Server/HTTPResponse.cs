@@ -30,7 +30,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public static string GetHeader(int statusCode)
         {
-            string status = GetStatusMessage(statusCode); 
+            string status = GetStatusMessage(statusCode);
             return $"HTTP/1.1 {statusCode} {status}";
         }
     }

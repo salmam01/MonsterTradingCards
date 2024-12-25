@@ -3,4 +3,4 @@ using MonsterTradingCardsGame.MTCG_Models.Server;
 using System.Net.Security;
 
 Server server = new Server("http://localhost:10001");
-server.StartServer();
+await server.StartServer();

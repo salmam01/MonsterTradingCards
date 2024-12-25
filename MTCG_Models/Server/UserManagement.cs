@@ -10,11 +10,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class UserManagement
     {
-        private DatabaseConnection _dbConnection;
+        private readonly DatabaseConnection _dbConnection;
+        private TokenManagement _tokenManagement;
 
         public UserManagement()
         {
             _dbConnection = new DatabaseConnection();
+            _tokenManagement = new TokenManagement();
         }
 
         //  Method that handles registering a new user
@@ -67,7 +69,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Helper method to check if a username is in the database
-        public static bool CheckIfUserExists(NpgsqlConnection connection, string username)
+        public bool CheckIfUserExists(NpgsqlConnection connection, string username)
         {
             try
             {
@@ -90,7 +92,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         }
 
         //  Method that handles login from already registered Users
-        public (int, string) Login(Dictionary<string, string> requestBody)
+        public (int, string, string) Login(Dictionary<string, string> requestBody)
         {
             string username = requestBody["Username"];
             string password = requestBody["Password"];
@@ -98,7 +100,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
             {
                 Console.WriteLine("Username or Password is empty.");
-                return (400, "Username or Password is empty.");
+                return (400, "Username or Password is empty.", "");
             }
             try
             {
@@ -106,12 +108,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
-                    return (500, "Internal Server Error occured.");
+                    return (500, "Internal Server Error occured.", "");
                 }
                 if (!CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User doesn't exist.");
-                    return (401, "Incorrect Username or Password.");
+                    return (401, "Incorrect Username or Password.", "");
                 }
 
                 using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", connection);
@@ -120,36 +122,47 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 if (resultObj == null)
                 {
-                    return (401, "Incorrect Username or Password.");
+                    return (401, "Incorrect Username or Password.", "");
                 }
 
                 string result = resultObj?.ToString();
 
                 if (result == password)
                 {
-                    string token = TokenManagement.GenerateToken(username);
+                    string token = _tokenManagement.GenerateToken(username);
+                    Console.WriteLine($"Token: {token}");
 
-                    if (token == null)
+                    if (!Parser.CheckIfValidString(token))
                     {
-                        return (500, "Internal Server Error occured.");
+                        return (500, "Internal Server Error occured.", "");
                     }
 
                     Console.WriteLine($"{username} logged in with {token} successfully!");
-                    return (200, $"{username} logged in successfully!");
+                    return (200, $"{username} logged in successfully!", token);
                 }
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return (500, "Internal Server Error occured.", "");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during login: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return (500, "Internal Server Error occured.", "");
             }
 
-            return (401, "Incorrect Username or Password.");
+            return (401, "Incorrect Username or Password.", "");
+        }
+
+        public (int, string) CreatePackages(Dictionary<string, string> requestBody)
+        {
+            if (!AdminCheck(requestBody["Username"]))
+            {
+                return (409, "Provided user is not admin.");
+            }
+
+            return (201, "Package and cards successfully created.");
         }
 
         //  Helper method that checks if a user has admin priviledges
@@ -186,6 +199,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
 
         }
+
+
 
     }
 }

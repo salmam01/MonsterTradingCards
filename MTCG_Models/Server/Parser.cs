@@ -73,15 +73,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
             i++;
 
+            _request.SetHeaders(requestData);
             _bodyStr = string.Join("\r\n", _requestStrLines.Skip(i));
-            _bodyStr = _bodyStr.Trim();
         }
 
         public void ParseBody()
         {
             try
             {
-                //  Ignore this warning
+                _bodyStr = _bodyStr.Trim();
                 _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
             }
             catch (JsonException e)

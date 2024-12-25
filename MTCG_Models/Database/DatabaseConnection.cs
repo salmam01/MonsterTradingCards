@@ -11,7 +11,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Database
     {
         private readonly string _host;
         private readonly string _port;
-        private readonly string _username;    
+        private readonly string _username;
         private readonly string _password;
         private readonly string _database;
 
