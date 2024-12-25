@@ -7,7 +7,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Frontend
     {
         protected string name;
         protected char type;
-        protected int damage = 10;
+        protected int damage;
         protected int element;
 
         public Card() { }

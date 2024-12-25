@@ -14,14 +14,52 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     {
         public string GenerateToken(string username)
         {
-            return username + "-mtcgToken";
+            string token = username + "-mtcgToken";
+
+            if (AddTokenToDatabase(username, token))
+            {
+                Console.WriteLine($"{token} has been added to database!");
+                return token;
+            }
+            else
+            {
+                Console.WriteLine("No user found with that username.");
+                return "";
+            }
         }
 
-        public bool CheckIfTokenIsValid(string username, string token)
+        public bool AddTokenToDatabase(string username, string token)
+        {
+            DatabaseConnection dbConnection = new();
+            using NpgsqlConnection connection = dbConnection.OpenConnection();
+            if (connection == null)
+            {
+                Console.WriteLine("Connection failed.");
+                return false;
+            }
+
+            using NpgsqlCommand command = new("UPDATE player SET token = @token WHERE username = @username", connection);
+
+            command.Parameters.AddWithValue("username", username);
+            command.Parameters.AddWithValue("token", token);
+
+            int rowsAffected = command.ExecuteNonQuery();
+
+            if (rowsAffected > 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool CheckIfTokenIsValid(string token)
         {
             try
             {
-                DatabaseConnection dbConnection = new DatabaseConnection();
+                DatabaseConnection dbConnection = new();
                 using NpgsqlConnection connection = dbConnection.OpenConnection();
                 if (connection == null)
                 {
@@ -29,8 +67,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     return false;
                 }
 
-                using NpgsqlCommand command = new("SELECT @username FROM player WHERE token = @token", connection);
-                command.Parameters.AddWithValue("username", username);
+                using NpgsqlCommand command = new("SELECT username FROM player WHERE token = @token", connection);
                 command.Parameters.AddWithValue("token", token);
                 object resultObj = command.ExecuteScalar();
 

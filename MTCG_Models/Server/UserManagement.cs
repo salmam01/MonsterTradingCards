@@ -130,7 +130,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (result == password)
                 {
                     string token = _tokenManagement.GenerateToken(username);
-                    Console.WriteLine($"Token: {token}");
 
                     if (!Parser.CheckIfValidString(token))
                     {
@@ -157,12 +156,24 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public (int, string) CreatePackages(Dictionary<string, string> requestBody)
         {
+            
             if (!AdminCheck(requestBody["Username"]))
             {
                 return (409, "Provided user is not admin.");
             }
+            
 
             return (201, "Package and cards successfully created.");
+        }
+
+        public bool CheckIfTokenIsValid(string token)
+        {
+            if(_tokenManagement.CheckIfTokenIsValid(token))
+            {
+                return true;
+            }
+            return false;
+            
         }
 
         //  Helper method that checks if a user has admin priviledges

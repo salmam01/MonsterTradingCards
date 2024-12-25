@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS player_stats
 
 CREATE TABLE IF NOT EXISTS card 
 (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     damage INT NOT NULL
 );
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS card
 CREATE TABLE IF NOT EXISTS stack 
 (
     player_id UUID,
-    card_id SERIAL,
+    card_id VARCHAR(255),
     PRIMARY KEY (player_id, card_id),
     FOREIGN KEY (player_id) REFERENCES player_stats (player_id),
     FOREIGN KEY (card_id) REFERENCES card (id)
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS stack
 CREATE TABLE IF NOT EXISTS deck 
 (
     player_id UUID,
-    card_id SERIAL,
+    card_id VARCHAR(255),
     PRIMARY KEY (player_id, card_id),
     FOREIGN KEY (player_id, card_id) REFERENCES stack (player_id, card_id)
 );
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS shop
 CREATE TABLE IF NOT EXISTS package 
 (
     shop_id SERIAL,
-    card_id SERIAL,
+    card_id VARCHAR(255),
     PRIMARY KEY (shop_id, card_id),
     FOREIGN KEY (shop_id) REFERENCES shop (id),
     FOREIGN KEY (card_id) REFERENCES card (id)

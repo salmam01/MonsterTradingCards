@@ -1,8 +1,7 @@
 Curl Scripts for Testing:
 
-curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"        #signup
-curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"     #login
-curl -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"
+curl -X POST http://localhost:10001/users --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"          #signup
+curl -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"         #login
 
 curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"      #signup
 curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"   #login
