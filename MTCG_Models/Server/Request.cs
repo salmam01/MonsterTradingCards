@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,16 +11,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     public class Request
     {
         private readonly string _method;
-        public readonly string _path;
-        public readonly string _ver;
-        public Dictionary<string, string> _headers;
-        public Dictionary<string, string> _body;
+        private readonly string _path;
+        private readonly string _version;
+        private Dictionary<string, string> _headers;
+        private Dictionary<string, string> _body;
+        private List<Card> _cards;
 
         public Request(string method, string path, string ver)
         {
             _method = method;
             _path = path;
-            _ver = ver;
+            _version = ver;
         }
 
         public void SetHeaders(Dictionary<string, string> headers)
@@ -30,6 +32,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public void SetBody(Dictionary<string, string> body)
         {
             _body = body;
+        }
+
+        public void SetCards(List<Card> cards)
+        {
+            _cards = cards;
         }
 
         public string GetMethod()
@@ -50,6 +57,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public Dictionary<string, string> GetBody()
         {
             return _body;
+        }
+
+        public List<Card> GetCards()
+        {
+            return _cards;
         }
     }
 }

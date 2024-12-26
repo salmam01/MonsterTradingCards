@@ -33,7 +33,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             {
                 return _response = new(400, "Method or Path is missing from the request.");
             }
-            if (_request._headers == null || _request._body == null)
+            if (_request.GetHeaders() == null)
             {
                 return _response = new(400, "Headers or Body are missing from the request.");
             }
@@ -78,6 +78,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
             int statusCode;
             string message;
+            _request = _parser.ParseBody();
+            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             switch (path)
             {
@@ -100,6 +102,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     message = "Invalid path.";
                     break;
 
+                case "/users":
+                    (statusCode, message) = _userManagement.GetUserData(_request.GetBody(), token);
+                    break;
+
                 //  Path does not exist, send Error Response Code to Client
                 default:
                     Console.WriteLine("Invalid path.");
@@ -116,28 +122,30 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             Console.WriteLine($"Handling POST Request for {path}...");
 
             int statusCode;
-            string message, token = "";
-            Dictionary<string, string> requestBody = _request.GetBody();
+            string message;
+            string token = "";
 
             switch (path)
             {
-                //  API-Endpoint for sign up
                 case "/users":
-                    (statusCode, message) = _userManagement.SignUp(requestBody);
+                    _request = _parser.ParseBody();
+                    (statusCode, message) = _userManagement.SignUp(_request.GetBody());
                     break;
 
-                //  API-Endpoint for login
                 case "/sessions":
-                    (statusCode, message, token) = _userManagement.Login(requestBody);
+                    _request = _parser.ParseBody();
+                    (statusCode, message, token) = _userManagement.Login(_request.GetBody());
+                    
                     break;
 
                 case "/packages":
-                    (statusCode, message) = _userManagement.CreatePackages(requestBody);
-                    
-                    Console.WriteLine("Invalid path.");
+                    _request = _parser.ParseCards();
+                    token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+                    (statusCode, message) = _userManagement.CreatePackage(_request.GetCards(), token);
                     break;
 
                 case "/transactions":
+                    _request = _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     statusCode = 404;
                     message = "Invalid path.";
@@ -150,25 +158,30 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     message = "Invalid path.";
                     break;
             }
+
             _response = new(statusCode, message);
-            if(Parser.CheckIfValidString(token))
+            if(string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(token) || token.Length <= 0)
             {
                 _response.SetToken(token);
             }
+            
         }
 
         //  PUT and DELETE will be implemented later
         public void PutRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
+            //string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             switch (path)
             {
                 case "/deck":
+                    _request = _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     break;
 
                 default:
+                    _request = _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     break;
             }
@@ -180,14 +193,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public void DeleteRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
+            //string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             switch (path)
             {
                 case "/deck":
+                    _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     break;
 
                 default:
+                    _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     break;
             }

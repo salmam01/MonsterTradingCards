@@ -1,13 +1,12 @@
 ﻿using System;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Frontend
+namespace MonsterTradingCardsGame.MTCG_Models.Models
 {
     public class MonsterCard : Card
     {
-        public MonsterCard()
+        public MonsterCard(string id, string name, int damage) : base(id, name, damage)
         {
-            type = 'M';
-
+            _type = 'M';
         }
 
         public void SetRandomDamage()

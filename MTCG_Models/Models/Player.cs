@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Frontend
+namespace MonsterTradingCardsGame.MTCG_Models.Models
 {
     public class Player
     {

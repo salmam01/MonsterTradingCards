@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using MonsterTradingCardsGame.MTCG_Models.Database;
+using MonsterTradingCardsGame.MTCG_Models.Models;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
@@ -35,6 +36,27 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 _listener.Start();
                 Console.WriteLine("Server started.");
                 Console.WriteLine("Waiting for a connection...");
+
+                //  Create Shop if it doesn't exist
+                int shopId = 1;
+                DatabaseConnection dbConnection = new();
+                using NpgsqlConnection connection = dbConnection.OpenConnection();
+                if (connection == null)
+                {
+                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    Console.WriteLine($"An internal server error occurred.");
+                    StopServer();
+                }
+
+                if (!CheckIfShopExists(connection, shopId))
+                {
+                    CreateShop(connection, shopId);
+                    Console.WriteLine("New shop created!");
+                }
+                else
+                {
+                    Console.WriteLine("Shop already exists.");
+                }
 
                 while (_isRunning)
                 {
@@ -115,6 +137,28 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 Console.WriteLine("Connection closed.");
                 client.Close();
             }
+        }
+
+        public bool CheckIfShopExists(NpgsqlConnection connection, int id)
+        {
+            using NpgsqlCommand command = new("SELECT id FROM shop WHERE @id = id", connection);
+            command.Parameters.AddWithValue("id", id);
+
+            object resultObj = command.ExecuteScalar();
+
+            if (resultObj == null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public void CreateShop(NpgsqlConnection connection, int id)
+        {
+            using NpgsqlCommand command = new("INSERT INTO shop (id) VALUES (@id)", connection);
+            command.Parameters.AddWithValue("id", id);
+            command.ExecuteNonQuery();
         }
 
         public void StopServer()

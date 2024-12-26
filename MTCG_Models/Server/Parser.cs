@@ -1,4 +1,5 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+using MonsterTradingCardsGame.MTCG_Models.Server;
 using Npgsql.Internal;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
@@ -40,17 +42,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 Console.WriteLine("Empty headers.");
                 return _request;
             }
-            if (!CheckIfValidString(_bodyStr))
-            {
-                Console.WriteLine("Invalid body string.");
-                return _request;
-            }
-
-            ParseBody();
-            if (_request.GetBody() == null)
-            {
-                Console.WriteLine("Empty Body.");
-            }
 
             return _request;
         }
@@ -75,14 +66,23 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
             _request.SetHeaders(requestData);
             _bodyStr = string.Join("\r\n", _requestStrLines.Skip(i));
+            _bodyStr = _bodyStr.Trim();
         }
 
-        public void ParseBody()
+        public Request ParseBody()
         {
             try
             {
-                _bodyStr = _bodyStr.Trim();
+                if (!CheckIfValidString(_bodyStr))
+                {
+                    Console.WriteLine("Invalid body string.");
+                }
                 _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
+
+                if (_request.GetBody() == null)
+                {
+                    Console.WriteLine("Empty Body.");
+                }
             }
             catch (JsonException e)
             {
@@ -92,6 +92,45 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             {
                 Console.WriteLine("Parsing request body failed: " + e.Message);
             }
+            return _request;
+
+        }
+
+        public Request ParseCards()
+        {
+            try
+            {
+                if (!CheckIfValidString(_bodyStr))
+                {
+                    Console.WriteLine("Invalid body string.");
+                }
+                _request.SetCards(JsonSerializer.Deserialize<List<Card>>(_bodyStr));
+
+                if (_request.GetCards() == null)
+                {
+                    Console.WriteLine("Empty Cards.");
+                }
+
+                foreach (Card card in _request.GetCards())
+                {
+                    Console.WriteLine(card.Name);
+                }
+            }
+            catch (JsonException e)
+            {
+                Console.WriteLine("An error occured during Deserialization: " + e.Message);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Parsing request body failed: " + e.Message);
+            }
+            return _request;
+        }
+
+        public string ExtractToken(string tokenStr)
+        {
+            string token = tokenStr.Trim();
+            return token.Substring(7);
         }
 
         //  Helper method to check for an empty string

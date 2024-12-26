@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS card
 (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    damage INT NOT NULL
+    damage  DOUBLE PRECISION NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS stack 
@@ -43,12 +43,12 @@ CREATE TABLE IF NOT EXISTS deck
 
 CREATE TABLE IF NOT EXISTS shop 
 (
-    id SERIAL PRIMARY KEY
+    id INT PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS package 
 (
-    shop_id SERIAL,
+    shop_id INT,
     card_id VARCHAR(255),
     PRIMARY KEY (shop_id, card_id),
     FOREIGN KEY (shop_id) REFERENCES shop (id),

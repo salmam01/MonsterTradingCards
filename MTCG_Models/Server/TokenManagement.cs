@@ -12,11 +12,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
     public class TokenManagement
     {
-        public string GenerateToken(string username)
+        private Parser _parser;
+
+        public string GenerateToken(NpgsqlConnection connection, string username)
         {
             string token = username + "-mtcgToken";
 
-            if (AddTokenToDatabase(username, token))
+            if (AddTokenToDatabase(connection, username, token))
             {
                 Console.WriteLine($"{token} has been added to database!");
                 return token;
@@ -28,16 +30,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public bool AddTokenToDatabase(string username, string token)
+        public bool AddTokenToDatabase(NpgsqlConnection connection, string username, string token)
         {
-            DatabaseConnection dbConnection = new();
-            using NpgsqlConnection connection = dbConnection.OpenConnection();
-            if (connection == null)
-            {
-                Console.WriteLine("Connection failed.");
-                return false;
-            }
-
             using NpgsqlCommand command = new("UPDATE player SET token = @token WHERE username = @username", connection);
 
             command.Parameters.AddWithValue("username", username);
@@ -55,18 +49,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public bool CheckIfTokenIsValid(string token)
+        public bool CheckIfTokenIsValid(NpgsqlConnection connection, string token)
         {
             try
             {
-                DatabaseConnection dbConnection = new();
-                using NpgsqlConnection connection = dbConnection.OpenConnection();
-                if (connection == null)
-                {
-                    Console.WriteLine("Connection failed.");
-                    return false;
-                }
-
                 using NpgsqlCommand command = new("SELECT username FROM player WHERE token = @token", connection);
                 command.Parameters.AddWithValue("token", token);
                 object resultObj = command.ExecuteScalar();
