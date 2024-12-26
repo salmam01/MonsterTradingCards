@@ -26,6 +26,7 @@ curl -i -X POST http://localhost:10001/packages --header "Content-Type: applicat
 echo "Should return HTTP 201"
 echo.
 
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 Run the Docker Container:
 docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtcg1234 -e POSTGRES_DB=mtcg_database -p 5432:5432 -d postgres

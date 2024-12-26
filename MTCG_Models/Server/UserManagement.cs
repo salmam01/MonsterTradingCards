@@ -4,6 +4,7 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,7 +24,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         // SHOULD RETURN RESPONSE OBJECT REALISTICALLY
 
         //  Method that handles registering a new user
-        public (int, string) SignUp(Dictionary<string, string> requestBody)
+        public Response SignUp(Dictionary<string, string> requestBody)
         {
             try
             {
@@ -34,19 +35,19 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
                 {
                     Console.WriteLine("Username or Password is empty.");
-                    return (400, "Username or Password is empty.");
+                    return new Response(400, "Username or Password is empty.");
                 }
 
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection to Database failed.");
-                    return (500, "Internal Server Error occured.");
+                    return new Response(500, "Internal Server Error occured.");
                 }
                 if (CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User already exists.");
-                    return (409, "User already exists.");
+                    return new Response(409, "User already exists.");
                 }
                 Console.WriteLine("Connection successfully established with Database.");
 
@@ -57,17 +58,29 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 command.ExecuteNonQuery();
                 Console.WriteLine($"{username} has been added to database!");
                 
-                return (201, $"{username} signed up successfully! Please login to proceed.");
+                //  Add default player stats to new user
+                string id = GetPlayerId(connection, username);
+                if(id == null)
+                {
+                    new Response(500, "Internal Server Error occured.");
+                }
+
+                if(!AddPlayerStats(connection, id))
+                {
+                    new Response(500, "Internal Server Error occured.");
+                }
+
+                return new Response(201, $"{username} signed up successfully! Please login to proceed.");
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return new Response(500, "Internal Server Error occured.");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return new Response(500, "Internal Server Error occured.");
             }
         }
 
@@ -85,38 +98,87 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                throw;
+                return false;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error while checking for user: {e.Message}");
-                throw;
+                return false;
+            }
+        }
+
+        public bool AddPlayerStats(NpgsqlConnection connection, string id)
+        {
+            try
+            {
+                using NpgsqlCommand command = new("INSERT INTO player_stats (player_id) VALUES (@id)", connection);
+                command.Parameters.AddWithValue("id", id);
+                command.ExecuteNonQuery();
+
+                Console.WriteLine($"Player_stats has been added to UserID {id}.");
+                return true;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while checking for user: {e.Message}");
+                return false;
+            }
+        }
+
+        public string GetPlayerId(NpgsqlConnection connection, string username)
+        {
+            try
+            {
+                using NpgsqlCommand command = new("SELECT id FROM player WHERE username = @username", connection);
+                command.Parameters.AddWithValue("username", username);
+                var resultObj = command.ExecuteScalar();
+
+                if(resultObj == null)
+                {
+                    return null;
+                }
+                return resultObj.ToString();
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return null;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while checking for user: {e.Message}");
+                return null;
             }
         }
 
         //  Method that handles login from already registered Users
-        public (int, string, string) Login(Dictionary<string, string> requestBody)
+        public Response Login(Dictionary<string, string> requestBody)
         {
-            string username = requestBody["Username"];
-            string password = requestBody["Password"];
-
-            if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
-            {
-                Console.WriteLine("Username or Password is empty.");
-                return (400, "Username or Password is empty.", "");
-            }
             try
             {
+                string username = requestBody["Username"];
+                string password = requestBody["Password"];
+
+                if (!Parser.CheckIfValidString(username) || !Parser.CheckIfValidString(password))
+                {
+                    Console.WriteLine("Username or Password is empty.");
+                    return new Response(400, "Username or Password is empty.");
+                }
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine("Connection to Database failed.");
-                    return (500, "Internal Server Error occured.", "");
+                    return new Response(500, "Internal Server Error occured.");
                 }
                 if (!CheckIfUserExists(connection, username))
                 {
                     Console.WriteLine("User doesn't exist.");
-                    return (401, "Incorrect Username or Password.", "");
+                    return new Response(401, "Incorrect Username or Password.");
                 }
 
                 using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", connection);
@@ -125,39 +187,46 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 if (resultObj == null)
                 {
-                    return (401, "Incorrect Username or Password.", "");
+                    return new Response(401, "Incorrect Username or Password.");
                 }
 
                 string result = resultObj?.ToString();
 
                 if (result == password)
                 {
+                    Response response;
                     string token = _tokenManagement.GenerateToken(connection, username);
 
                     if (!Parser.CheckIfValidString(token))
                     {
-                        return (500, "Internal Server Error occured.", "");
+                        response = new(500, "Internal Server Error occured.");
+                        return response;
                     }
-
                     Console.WriteLine($"{username} logged in with {token} successfully!");
-                    return (200, $"{username} logged in successfully!", token);
+                    response = new(200, $"{username} logged in successfully!");
+                    response.SetToken(token);
+
+                    return response;
+                }
+                else
+                {
+                    return new Response(401, "Incorrect Username or Password.");
                 }
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return (500, "Internal Server Error occured.", "");
+                return new Response(500, "Internal Server Error occured.");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during login: {e.Message}");
-                return (500, "Internal Server Error occured.", "");
+                return new Response(500, "Internal Server Error occured.");
             }
 
-            return (401, "Incorrect Username or Password.", "");
         }
 
-        public (int, string) CreatePackage(List<Card> requestBody, string token)
+        public Response CreatePackage(List<Card> requestBody, string token)
         {
             try
             {
@@ -165,22 +234,22 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 if (connection == null)
                 {
                     Console.WriteLine("Connection to Database failed.");
-                    return (500, "Internal Server Error occured.");
+                    return new Response(500, "Internal Server Error occured.");
                 }
 
                 if (!CheckIfTokenIsValid(connection, token))
                 {
-                    return (401, "Unauthorized.");
+                    return new Response(401, "Unauthorized.");
                 }
                 if (!AdminCheck(connection, token))
                 {
-                    return (409, "Provided user is not admin.");
+                    return new Response(409, "Provided user is not admin.");
                 }
 
                 //  Add cards to the database
                 if(!AddCardToDatabase(connection, requestBody))
                 {
-                    return (500, "An internal server error occurred.");
+                    return new Response(500, "An internal server error occurred.");
                 }
 
                 //  Add cards to package
@@ -195,17 +264,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     Console.WriteLine($"{requestBody[i].Name} has been added to package!");
                 }
 
-                return (201, "Package and cards successfully created.");
+                return new Response(201, "Package and cards successfully created.");
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return new Response(500, "Internal Server Error occured.");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during login: {e.Message}");
-                return (500, "Internal Server Error occured.");
+                return new Response(500, "Internal Server Error occured.");
             }
         }
 
@@ -238,40 +307,135 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         }
 
-        //  Missing Implementation
-        public (int, string) GetUserData(Dictionary<string, string> requestBody, string token)
+        public Response AquirePackage(string token)
         {
-            using NpgsqlConnection connection = _dbConnection.OpenConnection();
-            if (connection == null)
+            try
             {
-                Console.WriteLine("Connection to Database failed.");
-                return (500, "Internal Server Error occured.");
-            }
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
 
-            if (!CheckIfTokenIsValid(connection, token))
+                if (!CheckIfTokenIsValid(connection, token))
+                {
+                    return new Response(401, "Unauthorized.");
+                }
+
+                int coins = GetUserCoins(connection, GetUsername(connection, token));
+                
+                //  I think stack needs to be implemented before this can be implemented
+                if(coins >= 5)
+                {
+                    return new Response(200, "A package has been successfully bought.");
+                }
+                else
+                {
+                    return new Response(403, "Not enough money for buying a card package.");
+                }
+                /*using NpgsqlCommand command = new("SELECT id FROM package WHERE username = @username", connection);
+                command.Parameters.AddWithValue("username", username);
+                object resultObj = command.ExecuteScalar();
+
+                if (resultObj == null)
+                {
+                    return new Response(401, "Incorrect Username or Password.");
+                }*/
+            }
+            catch (NpgsqlException e)
             {
-                return (401, "Unauthorized.");
+                Console.WriteLine($"Failed to connect to Database: {e.Message}"); 
+                return new Response(500, "Internal Server Error occured.");
             }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during login: {e.Message}");
+                return new Response(500, "Internal Server Error occured.");
+            }
+        }
 
-            return (0, "");
+        public int GetUserCoins(NpgsqlConnection connection, string username)
+        {
+            try
+            {
+                using NpgsqlCommand command = new("SELECT coins FROM player_stats WHERE username = @username", connection);
+                command.Parameters.AddWithValue("username", username);
+                object resultObj = command.ExecuteScalar();
+
+                if (resultObj == null)
+                {
+                    return 0;
+                }
+                return Convert.ToInt32(resultObj);
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return 0;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during Admin Check: {e.Message}");
+                return 0;
+            }
         }
 
         //  Missing Implementation
-        public (int, string) UpdateUserData(Dictionary<string, string> requestBody, string token)
+        public Response GetUserData(Dictionary<string, string> requestBody, string token)
         {
             using NpgsqlConnection connection = _dbConnection.OpenConnection();
             if (connection == null)
             {
                 Console.WriteLine("Connection to Database failed.");
-                return (500, "Internal Server Error occured.");
+                return new Response(500, "Internal Server Error occured.");
             }
 
             if (!CheckIfTokenIsValid(connection, token))
             {
-                return (401, "Unauthorized.");
+                return new Response(401, "Unauthorized.");
             }
 
-            return (0, "");
+            return new Response(0, "");
+        }
+
+        //  Missing Implementation
+        public Response UpdateUserData(Dictionary<string, string> requestBody, string token)
+        {
+            using NpgsqlConnection connection = _dbConnection.OpenConnection();
+            if (connection == null)
+            {
+                Console.WriteLine("Connection to Database failed.");
+                return new Response(500, "Internal Server Error occured.");
+            }
+
+            if (!CheckIfTokenIsValid(connection, token))
+            {
+                return new Response(401, "Unauthorized.");
+            }
+
+            return new Response(0, "");
+        }
+
+        public string? GetUsername(NpgsqlConnection connection, string token)
+        {
+            try
+            {
+                using NpgsqlCommand command = new("SELECT username FROM player WHERE token = @token", connection);
+                command.Parameters.AddWithValue("token", token);
+
+                return command.ExecuteScalar()?.ToString();
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return null;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during Admin Check: {e.Message}");
+                return null;
+            }
         }
 
         public bool CheckIfTokenIsValid(NpgsqlConnection connection, string token)
@@ -307,8 +471,5 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 return false;
             }
         }
-
-
-
     }
 }
