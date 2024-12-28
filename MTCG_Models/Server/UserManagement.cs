@@ -232,7 +232,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 command.Parameters.AddWithValue("shopId", shopId);
 
                 //  Retrieve the new package id
-                int packageId = Convert.ToInt32(command.ExecuteScalar());
+                string? packageId = command.ExecuteScalar()?.ToString();
+                if(packageId == null)
+                {
+                    Console.WriteLine("Error occured while retrieving package ID.");
+                    return new Response(500, "An internal server error occurred.");
+                }
                 Console.WriteLine($"Package with ID {packageId} has been added to the database.");
 
                 //  Add cards to the database
@@ -256,17 +261,24 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public bool AddCardsToDatabase(NpgsqlConnection connection, List<Card> cards, int packageId)
+        public bool AddCardsToDatabase(NpgsqlConnection connection, List<Card> cards, string packageId)
         {
             try
             {
+                // Convert user ID to a UUID
+                if (!Guid.TryParse(packageId, out Guid packageGuid))
+                {
+                    Console.WriteLine($"Invalid package ID: {packageId}");
+                    return false;
+                }
+
                 for (int i = 0; i < cards.Count; i++)
                 {
                     using NpgsqlCommand command = new("INSERT INTO card (id, name, damage, package_id) VALUES (@id, @name, @damage, @packageId)", connection);
                     command.Parameters.AddWithValue("id", cards[i].Id);
                     command.Parameters.AddWithValue("name", cards[i].Name);
                     command.Parameters.AddWithValue("damage", cards[i].Damage);
-                    command.Parameters.AddWithValue("packageId", packageId);
+                    command.Parameters.AddWithValue("packageId", packageGuid);
                     command.ExecuteNonQuery();
 
                     Console.WriteLine($"{cards[i].Name} has been added to database!");
@@ -298,58 +310,68 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 if (!CheckIfTokenIsValid(connection, token))
                 {
+                    Console.WriteLine("Token invalid.");
                     return new Response(401, "Unauthorized.");
                 }
 
                 string? username = GetUsername(connection, token);
                 if(username == null)
                 {
+                    Console.WriteLine("Username is null.");
                     return new Response(500, "Internal Server Error occured.");
                 }
 
                 Guid? userId = GetUserId(connection, username);
                 if (userId == null)
                 {
+                    Console.WriteLine("User ID is null.");
                     return new Response(500, "Internal Server Error occured.");
                 }
 
                 int coins = GetUserCoins(connection, userId);
                 if(coins < _packageCost)
                 {
+                    Console.WriteLine($"Not enough money for buying a card package. Coins: {coins}");
                     return new Response(403, "Not enough money for buying a card package.");
                 }
 
-                int packageCount = CheckPackageCount(connection);
-                if(packageCount <= 0)
+                //  Select random package if any exists
+                Guid? randomPackageId = GetRandomPackage(connection);
+                if (randomPackageId == null)
                 {
+                    Console.WriteLine($"No packages available for purchase.");
                     return new Response(404, "No card package available for buying.");
                 }
 
-                //  Select a random package
-                Random randomNr = new();
-                int packageId = randomNr.Next(1, packageCount);
                 List<string> cardIds = new();
 
-                using NpgsqlCommand command = new("SELECT id FROM card WHERE package_id = @packageId", connection);
-                command.Parameters.AddWithValue("packageId", packageId);
-
-                using NpgsqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
+                // Make sure the SELECT query completes before moving forward
+                using (NpgsqlConnection selectConnection = _dbConnection.OpenConnection())
                 {
-                    cardIds.Add(reader["id"].ToString());
+                    using NpgsqlCommand command = new("SELECT id FROM card WHERE package_id = @packageId", selectConnection);
+                    command.Parameters.AddWithValue("packageId", randomPackageId);
+
+                    using NpgsqlDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        cardIds.Add(reader["id"].ToString());
+                    }
                 }
 
                 if (cardIds.Count < 5)
                 {
+                    Console.WriteLine($"Incorrect number of cards in package: {cardIds.Count}");
                     return new Response(500, "Internal Server Error occured.");
                 }
 
                 //  Delete the package once done
-                if (!DeletePackage(connection, packageId))
+                if (!DeletePackage(connection, randomPackageId.Value))
                 {
+                    Console.WriteLine("An error occured while deleting the aquired package.");
                     return new Response(500, "Internal Server Error occured.");
                 }
 
+                Console.WriteLine("Packages aquired successfully.");
                 return new Response(200, "A package has been successfully bought.");
             }
             catch (NpgsqlException e)
@@ -364,7 +386,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public bool DeletePackage(NpgsqlConnection connection, int packageId)
+        public bool DeletePackage(NpgsqlConnection connection, Guid packageId)
         {
             using (var transaction = connection.BeginTransaction())
             {
@@ -424,26 +446,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
 
             return new Response(0, "");
-        }
-
-        //  ????
-        public int GetPackageId(NpgsqlConnection connection)
-        {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT id FROM package;", connection);
-                return Convert.ToInt32(command.ExecuteScalar());
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return 0;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return 0;
-            }
         }
 
         public Guid? GetUserId(NpgsqlConnection connection, string username)
@@ -522,25 +524,37 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             }
         }
 
-        public int CheckPackageCount(NpgsqlConnection connection)
+        public Guid? GetRandomPackage(NpgsqlConnection connection)
         {
             try
             {
-                using NpgsqlCommand command = new("SELECT COUNT(*) FROM package WHERE shop_id = @shopId", connection);
+                using NpgsqlCommand command = new("SELECT id FROM package WHERE shop_id = @shopId ORDER BY RANDOM() LIMIT 1", connection);
                 command.Parameters.AddWithValue("shopId", _shopId);
-                int count = Convert.ToInt32(command.ExecuteScalar());
+                string? randomId = command.ExecuteScalar()?.ToString();
 
-                return count;
+                if (randomId == null)
+                {
+                    return null;
+                }
+
+                // Convert user ID to a UUID
+                if (!Guid.TryParse(randomId, out Guid randomGuid))
+                {
+                    Console.WriteLine($"Invalid player ID: {randomId}");
+                    return null;
+                }
+
+                return randomGuid;
             }
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return 0;
+                return null;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error occured during package counting: {e.Message}");
-                return 0;
+                return null;
             }
         }
 

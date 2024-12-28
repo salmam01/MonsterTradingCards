@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS shop
 
 CREATE TABLE IF NOT EXISTS package
 (
-    id SERIAL PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     shop_id INT,
     FOREIGN KEY (shop_id) REFERENCES shop(id)
 );
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS card
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     damage DOUBLE PRECISION NOT NULL,
-    package_id SERIAL,
+    package_id UUID,
     FOREIGN KEY (package_id) REFERENCES package(id)
 );
 
