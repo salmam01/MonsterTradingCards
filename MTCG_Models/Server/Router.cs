@@ -98,7 +98,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 case "/users/username":
                     //  To be implemented
-                    _response = _userManagement.GetUserData(_request.GetBody(), token);
+                    //_response = _userManagement.GetUserData(_request.GetBody(), token);
+                    _response = new(404, "Invalid path.");
                     break;
 
                 //  Path does not exist, send Error Response Code to Client
