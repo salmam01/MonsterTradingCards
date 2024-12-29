@@ -112,9 +112,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 Console.WriteLine($"Received:\n {requestStr}");
 
-                //  Each Thread has its own Database Connection
-                DatabaseConnection dbConnection = new();
-                Router router = new(dbConnection.OpenConnection(), requestStr, _shopId);
+                //  Each Thread has its own Database Connection and Router
+                Router router = new(requestStr, _shopId);
                 var response = router.RequestHandler();
 
                 await writer.WriteLineAsync(response.GetResponse());

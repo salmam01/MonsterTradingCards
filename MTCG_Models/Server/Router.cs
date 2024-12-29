@@ -1,4 +1,5 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.MTCG_Models.Database;
+using MonsterTradingCardsGame.MTCG_Models.Server;
 using MonsterTradingCardsGame.MTCG_Models.Services.Authentication;
 using Npgsql;
 using System;
@@ -19,9 +20,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         private readonly PackageManagement _packageManagement;
         private readonly NpgsqlConnection _connection;
 
-        public Router(NpgsqlConnection connection, string requestStr, int shopId)
+        public Router(string requestStr, int shopId)
         {
-            _connection = connection;
+            DatabaseConnection dbConn = new();
+            _connection = dbConn.OpenConnection();
             _parser = new(requestStr);
             _userManagement = new(_connection);
             _packageManagement = new(_connection, shopId);
@@ -45,6 +47,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             }
 
             MethodHandler();
+            _connection.Close();
             return _response;
         }
 
@@ -155,8 +158,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                         Guid? userId = _userManagement.GetUserId(token);
                         if(userId != null)
                         {
-                            int userCoins = _userManagement.GetUserCoins();
-                            _response = _packageManagement.AquirePackage(userCoins);
+                            _response = _userManagement.AquirePackage();
                         }
                         else
                         {

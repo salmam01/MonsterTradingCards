@@ -14,14 +14,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 {
     public class UserManagement
     {
-        private readonly TokenManagement _token;
         private readonly NpgsqlConnection _connection;
+        private readonly TokenManagement _tokenManagement;
+        private readonly PackageManagement _packageManagement;
         private Guid _userId;
 
         public UserManagement(NpgsqlConnection connection)
         {
-            _token = new();
             _connection = connection;
+            _tokenManagement = new();
+            _packageManagement = new(_connection, 1);
         }
 
         //  Method that handles registering a new user
@@ -109,7 +111,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error while checking for user: {e.Message}");
+                Console.WriteLine($"Error while checking if user exists: {e.Message}");
                 return false;
             }
         }
@@ -122,7 +124,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 command.Parameters.AddWithValue("userId", _userId);
                 command.ExecuteNonQuery();
 
-                Console.WriteLine($"Player_stats has been added to UserID {_userId}.");
+                Console.WriteLine($"Player stats has been added to UserID {_userId}.");
                 return true;
             }
             catch (NpgsqlException e)
@@ -132,7 +134,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error while checking for user: {e.Message}");
+                Console.WriteLine($"Error while adding player stats to player: {e.Message}");
                 return false;
             }
         }
@@ -163,35 +165,28 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
                 using NpgsqlCommand command = new("SELECT password FROM player WHERE username = @username", _connection);
                 command.Parameters.AddWithValue("username", username);
-                object resultObj = command.ExecuteScalar();
+                string? result = command.ExecuteScalar()?.ToString();
 
-                if (resultObj == null)
+                if (result == null || result != password)
                 {
+                    Console.WriteLine("Incorrect Username or Password.");
                     return new Response(401, "Incorrect Username or Password.");
                 }
 
-                string result = resultObj?.ToString();
+                Response response;
+                string token = _tokenManagement.GenerateToken(_connection, username);
 
-                if (result == password)
+                if (!Parser.CheckIfValidString(token))
                 {
-                    Response response;
-                    string token = _token.GenerateToken(_connection, username);
-
-                    if (!Parser.CheckIfValidString(token))
-                    {
-                        response = new(500, "Internal Server Error occured.");
-                        return response;
-                    }
-                    Console.WriteLine($"{username} logged in with {token} successfully!");
-                    response = new(200, $"{username} logged in successfully!");
-                    response.SetToken(token);
-
+                    response = new(500, "Internal Server Error occured.");
                     return response;
                 }
-                else
-                {
-                    return new Response(401, "Incorrect Username or Password.");
-                }
+
+                Console.WriteLine($"{username} logged in with {token} successfully!");
+                response = new(200, $"{username} logged in successfully!");
+                response.SetToken(token);
+                return response;
+
             }
             catch (NpgsqlException e)
             {
@@ -203,7 +198,95 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 Console.WriteLine($"Error occured during login: {e.Message}");
                 return new Response(500, "Internal Server Error occured.");
             }
+        }
 
+        public Response AquirePackage()
+        {
+            try
+            {
+                if (_connection == null)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                int coins = GetUserCoins();
+                if (coins < _packageManagement.GetPackageCost())
+                {
+                    Console.WriteLine($"Not enough money for buying a card package. Coins: {coins}");
+                    return new Response(403, "Not enough money for buying a card package.");
+                }
+
+                //  Select random package if any exists
+                Guid? randomPackageId = _packageManagement.GetRandomPackageId();
+                if (randomPackageId == null)
+                {
+                    Console.WriteLine($"No packages available for purchase.");
+                    return new Response(404, "No card package available for buying.");
+                }
+
+                List<string> cardIds = _packageManagement.GetCardIds(randomPackageId.Value);
+                if (cardIds.Count < _packageManagement.GetPackageSize())
+                {
+                    Console.WriteLine($"Incorrect number of cards in package: {cardIds.Count}");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                //  Delete the package once done
+                using (var transaction = _connection.BeginTransaction())
+                {
+                    if (!DeductCoins(transaction))
+                    {
+                        Console.WriteLine($"An error occured while buying the package.");
+                        return new Response(500, "Internal Server Error occured.");
+                    }
+
+                    if (!_packageManagement.DeletePackage(randomPackageId.Value, transaction))
+                    {
+                        transaction.Rollback();
+                        Console.WriteLine("An error occured while deleting the aquired package.");
+                        return new Response(500, "Internal Server Error occured.");
+                    }
+                    transaction.Commit();
+                }
+
+                Console.WriteLine("Packages aquired successfully.");
+                return new Response(201, "A package has been successfully bought.");
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "Internal Server Error occured.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during login: {e.Message}");
+                return new Response(500, "Internal Server Error occured.");
+            }
+        }
+
+        public bool DeductCoins(NpgsqlTransaction transaction)
+        {
+            try
+            {
+                int newCoins = GetUserCoins() - _packageManagement.GetPackageCost();
+                using NpgsqlCommand command = new("UPDATE player_stats SET coins = @newCoins WHERE player_id = @userId", _connection);
+                command.Parameters.AddWithValue("newCoins", newCoins);
+                command.Parameters.AddWithValue("userId", _userId);
+                command.ExecuteNonQuery();
+
+                return true;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error occured during Admin Check: {e.Message}");
+                return false;
+            }
         }
 
         //  Missing Implementation
@@ -248,9 +331,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 using NpgsqlCommand command = new("SELECT token FROM player WHERE username = @username", _connection);
                 command.Parameters.AddWithValue("@username", "admin");
 
-                object resultObj = command.ExecuteScalar();
+                string? resultToken = command.ExecuteScalar()?.ToString();
 
-                if (resultObj == null || resultObj.ToString() != token)
+                if (resultToken == null || resultToken != token)
                 {
                     return false;
                 }
@@ -335,7 +418,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
         public bool CheckIfTokenIsValid(string token)
         {
-            return _token.CheckIfTokenIsValid(_connection, token);
+            return _tokenManagement.CheckIfTokenIsValid(_connection, token);
         }
     }
 }

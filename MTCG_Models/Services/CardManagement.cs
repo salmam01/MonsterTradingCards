@@ -1,4 +1,5 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+﻿using MonsterTradingCardsGame.MTCG_Models.Database;
+using MonsterTradingCardsGame.MTCG_Models.Models;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -18,29 +19,54 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             _connection = connection;
         }
 
-        public bool AddCardsToDatabase(List<Card> cards, string packageId)
+        public bool AddCardsToDatabase(List<Card> cards, Guid packageId)
+        {
+            using var transaction = _connection.BeginTransaction();
+            try
+            {
+                foreach (var card in cards)
+                {
+                    if (CheckIfCardExists(card.Id))
+                    {
+                        Console.WriteLine($"Card {card.Name} with ID {card.Id} already exists, aborting transaction.");
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    using NpgsqlCommand command = new("INSERT INTO card (id, name, damage, package_id) VALUES (@id, @name, @damage, @packageId)", _connection);
+                    command.Parameters.AddWithValue("id", card.Id);
+                    command.Parameters.AddWithValue("name", card.Name);
+                    command.Parameters.AddWithValue("damage", card.Damage);
+                    command.Parameters.AddWithValue("packageId", packageId);
+                    command.ExecuteNonQuery();
+
+                    Console.WriteLine($"{card.Name} has been added to database!");
+                }
+
+                transaction.Commit();
+                return true;
+            }
+            catch (NpgsqlException e)
+            {
+                transaction.Rollback();
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                transaction.Rollback();
+                Console.WriteLine($"Error occured during login: {e.Message}");
+                return false;
+            }
+        }
+
+        public bool CheckIfCardExists(string cardId)
         {
             try
             {
-                // Convert user ID to a UUID
-                if (!Guid.TryParse(packageId, out Guid packageGuid))
-                {
-                    Console.WriteLine($"Invalid package ID: {packageId}");
-                    return false;
-                }
-
-                for (int i = 0; i < cards.Count; i++)
-                {
-                    using NpgsqlCommand command = new("INSERT INTO card (id, name, damage, package_id) VALUES (@id, @name, @damage, @packageId)", _connection);
-                    command.Parameters.AddWithValue("id", cards[i].Id);
-                    command.Parameters.AddWithValue("name", cards[i].Name);
-                    command.Parameters.AddWithValue("damage", cards[i].Damage);
-                    command.Parameters.AddWithValue("packageId", packageGuid);
-                    command.ExecuteNonQuery();
-
-                    Console.WriteLine($"{cards[i].Name} has been added to database!");
-                }
-                return true;
+                NpgsqlCommand command = new("SELECT COUNT(*) FROM card WHERE id = @cardId", _connection);
+                command.Parameters.AddWithValue("cardId", cardId);
+                return Convert.ToInt32(command.ExecuteScalar()) > 0;
             }
             catch (NpgsqlException e)
             {
