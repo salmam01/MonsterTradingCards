@@ -13,6 +13,9 @@ using System.Text.Json.Nodes;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using MonsterTradingCardsGame.MTCG_Models.Database;
 using MonsterTradingCardsGame.MTCG_Models.Models;
+using MonsterTradingCardsGame.MTCG_Models.Services;
+using System.Reflection.Metadata;
+using System.Transactions;
 
 namespace MonsterTradingCardsGame.MTCG_Models.Server
 {
@@ -20,12 +23,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
     {
         private readonly TcpListener _listener;
         private bool _isRunning = true;
+        private DatabaseConnection _dbConnection;
+        private const int _shopId = 1;
 
         public Server(string url)
         {
             var uri = new Uri(url);
             int port = uri.Port;
             _listener = new TcpListener(IPAddress.Any, port);
+            _dbConnection = new();
         }
 
         //  This method is the starting point of the server
@@ -38,9 +44,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 Console.WriteLine("Waiting for a connection...");
 
                 //  Create Shop if it doesn't exist
-                int shopId = 1;
-                DatabaseConnection dbConnection = new();
-                using NpgsqlConnection connection = dbConnection.OpenConnection();
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
                     Console.WriteLine($"Connection failed. Status: {connection.State}");
@@ -48,9 +52,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                     StopServer();
                 }
 
-                if (!CheckIfShopExists(connection, shopId))
+                if (!CheckIfShopExists(connection, _shopId))
                 {
-                    CreateShop(connection, shopId);
+                    CreateShop(connection, _shopId);
                     Console.WriteLine("New shop created!");
                 }
                 else
@@ -69,12 +73,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             catch (SocketException e)
             {
                 Console.WriteLine($"SocketException: {e}");
-                StopServer();
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                StopServer();
             }
             finally
             {
@@ -106,7 +112,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
                 Console.WriteLine($"Received:\n {requestStr}");
 
-                Router router = new(requestStr);
+                //  Each Thread has its own Database Connection
+                DatabaseConnection dbConnection = new();
+                Router router = new(dbConnection.OpenConnection(), requestStr, _shopId);
                 var response = router.RequestHandler();
 
                 await writer.WriteLineAsync(response.GetResponse());
@@ -163,9 +171,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public void StopServer()
         {
+            Console.WriteLine("Server is shutting down...");
             _isRunning = false;
             _listener.Stop();
-            Console.WriteLine("Server initiating Shutdown...");
         }
     }
 }

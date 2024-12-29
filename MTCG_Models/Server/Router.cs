@@ -1,4 +1,6 @@
 ﻿using MonsterTradingCardsGame.MTCG_Models.Server;
+using MonsterTradingCardsGame.MTCG_Models.Services.Authentication;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +8,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.MTCG_Models.Services
 {
     public class Router
     {
@@ -14,11 +16,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         private Request _request;
         private readonly Parser _parser;
         private readonly UserManagement _userManagement;
+        private readonly PackageManagement _packageManagement;
+        private readonly NpgsqlConnection _connection;
 
-        public Router(string requestStr)
+        public Router(NpgsqlConnection connection, string requestStr, int shopId)
         {
+            _connection = connection;
             _parser = new(requestStr);
-            _userManagement = new UserManagement();
+            _userManagement = new(_connection);
+            _packageManagement = new(_connection, shopId);
         }
 
         //  Method that redirects users depending on the HTTP method
@@ -126,19 +132,42 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 case "/sessions":
                     _request = _parser.ParseBody();
                     _response = _userManagement.Login(_request.GetBody());
-                    
                     break;
 
-                //  Check if token is null!!
                 case "/packages":
                     _request = _parser.ParseCards();
                     token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
-                    _response = _userManagement.CreatePackage(_request.GetCards(), token);
+                    
+                    if (_userManagement.CheckIfTokenIsValid(token) && _userManagement.CheckIfAdmin(token))
+                    {
+                        _response = _packageManagement.CreatePackage(_request.GetCards());
+                    }
+                    else
+                    {
+                        _response = new(401, "Unauthorized.");
+                    }
                     break;
 
                 case "/transactions/packages":
                     token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
-                    _response = _userManagement.AquirePackage(token);
+                    if (_userManagement.CheckIfTokenIsValid(token))
+                    {
+                        Guid? userId = _userManagement.GetUserId(token);
+                        if(userId != null)
+                        {
+                            int userCoins = _userManagement.GetUserCoins();
+                            _response = _packageManagement.AquirePackage(userCoins);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Username is null.");
+                            _response = new(500, "Internal Server Error occured.");
+                        }
+                    }
+                    else
+                    {
+                        _response = new(401, "Unauthorized.");
+                    }
                     break;
 
                 //  Path does not exist, send Error Response Code to Client

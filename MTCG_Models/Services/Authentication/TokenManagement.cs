@@ -1,4 +1,5 @@
 ﻿using MonsterTradingCardsGame.MTCG_Models.Database;
+using MonsterTradingCardsGame.MTCG_Models.Server;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -8,12 +9,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 {
     public class TokenManagement
     {
-        private Parser _parser;
-
         public string GenerateToken(NpgsqlConnection connection, string username)
         {
             string token = username + "-mtcgToken";
