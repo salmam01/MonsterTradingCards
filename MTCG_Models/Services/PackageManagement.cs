@@ -15,16 +15,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 {
     public class PackageManagement
     {
-        private readonly NpgsqlConnection _connection;
+        private readonly DatabaseConnection _dbConnection;
         private readonly CardManagement _cardManagement;
         private const int _packageSize = 5;
         private const int _packageCost = 5;
         private readonly int _shopId = 1;
 
-        public PackageManagement(NpgsqlConnection connection, int shopId)
+        public PackageManagement(DatabaseConnection dbConnection, int shopId)
         {
-            _connection = connection;
-            _cardManagement = new(_connection);
+            _dbConnection = dbConnection;
+            _cardManagement = new(_dbConnection);
             _shopId = shopId;
         }
 
@@ -32,7 +32,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         {
             try
             {
-                if (_connection == null)
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != System.Data.ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -43,7 +44,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 }
 
                 //  Create a new package
-                using NpgsqlCommand command = new("INSERT INTO package (shop_id) VALUES (@shopId) RETURNING id", _connection);
+                using NpgsqlCommand command = new("INSERT INTO package (shop_id) VALUES (@shopId) RETURNING id", connection);
                 command.Parameters.AddWithValue("shopId", _shopId);
 
                 //  Retrieve the new package id
@@ -76,56 +77,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             }
         }
 
-        public List<string> GetCardIds(Guid packageId)
-        {
-            List<string> cardIds = new();
-            try
-            {
-                using (var command = new NpgsqlCommand("SELECT id FROM card WHERE package_id = @packageId", _connection))
-                {
-                    command.Parameters.AddWithValue("packageId", packageId);
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            cardIds.Add(reader["id"].ToString());
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error while deleting package: {e.Message}");
-            }
-            return cardIds;
-        }
-
-        public bool DeletePackage(Guid packageId, NpgsqlTransaction transaction)
+        public Guid? GetRandomPackageId(NpgsqlConnection connection)
         {
             try
             {
-                using var deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", _connection, transaction);
-                deletePackageId.Parameters.AddWithValue("packageId", packageId);
-                deletePackageId.ExecuteNonQuery();
-                
-                using var deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", _connection, transaction);                
-                deletePackage.Parameters.AddWithValue("packageId", packageId);
-                deletePackage.ExecuteNonQuery();
-                
-                return true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error while deleting package: {e.Message}");
-                return false;
-            }
-        }
-
-        public Guid? GetRandomPackageId()
-        {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT id FROM package WHERE shop_id = @shopId ORDER BY RANDOM() LIMIT 1", _connection);
+                using NpgsqlCommand command = new("SELECT id FROM package WHERE shop_id = @shopId ORDER BY RANDOM() LIMIT 1", connection);
                 command.Parameters.AddWithValue("shopId", _shopId);
                 Guid? randomId = (Guid?)command.ExecuteScalar();
                 return randomId;
@@ -139,6 +95,60 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             {
                 Console.WriteLine($"Error occured during package counting: {e.Message}");
                 return null;
+            }
+        }
+
+        public List<string> GetCardIds(NpgsqlConnection connection, Guid packageId)
+        {
+            List<string> cardIds = new();
+            try
+            {
+                using (var command = new NpgsqlCommand("SELECT id FROM card WHERE package_id = @packageId", connection))
+                {
+                    command.Parameters.AddWithValue("packageId", packageId);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            cardIds.Add(reader["id"].ToString());
+                        }
+                    }
+                }
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while deleting package: {e.Message}");
+            }
+            return cardIds;
+        }
+
+        public bool DeletePackage(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid packageId)
+        {
+            try
+            {
+                using var deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", connection, transaction);
+                deletePackageId.Parameters.AddWithValue("packageId", packageId);
+                deletePackageId.ExecuteNonQuery();
+                
+                using var deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", connection, transaction);                
+                deletePackage.Parameters.AddWithValue("packageId", packageId);
+                deletePackage.ExecuteNonQuery();
+                
+                return true;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while deleting package: {e.Message}");
+                return false;
             }
         }
 

@@ -18,15 +18,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         private readonly Parser _parser;
         private readonly UserManagement _userManagement;
         private readonly PackageManagement _packageManagement;
-        private readonly NpgsqlConnection _connection;
+        private DatabaseConnection _dbConnection;
 
         public Router(string requestStr, int shopId)
         {
-            DatabaseConnection dbConn = new();
-            _connection = dbConn.OpenConnection();
+            _dbConnection = new();
             _parser = new(requestStr);
-            _userManagement = new(_connection);
-            _packageManagement = new(_connection, shopId);
+            _userManagement = new(_dbConnection);
+            _packageManagement = new(_dbConnection, shopId);
         }
 
         //  Method that redirects users depending on the HTTP method
@@ -47,7 +46,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             }
 
             MethodHandler();
-            _connection.Close();
             return _response;
         }
 
@@ -84,7 +82,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public void GetRequestHandler(string path)
         {
             Console.WriteLine($"Handling GET Request for {path}...");
-            _request = _parser.ParseBody();
             string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             switch (path)
@@ -94,15 +91,25 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     break;
 
                 case "/cards":
-                    //  To be implemented
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
+                    if (_userManagement.CheckIfTokenIsValid(token))
+                    {
+                        _response = _userManagement.GetUserStack(token);
+                    }
+                    else
+                    {
+                        _response = new(401, "Unauthorized.");
+                    }
                     break;
 
                 case "/deck":
-                    //  To be implemented
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
+                    if (_userManagement.CheckIfTokenIsValid(token))
+                    {
+                        _response = _userManagement.GetUserDeck(token);
+                    }
+                    else
+                    {
+                        _response = new(401, "Unauthorized.");
+                    }
                     break;
 
                 case "/users/username":
@@ -123,6 +130,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public void PostRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
+            using NpgsqlConnection connection = _dbConnection.OpenConnection();
             string token;
 
             switch (path)
@@ -141,7 +149,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     _request = _parser.ParseCards();
                     token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
                     
-                    if (_userManagement.CheckIfTokenIsValid(token) && _userManagement.CheckIfAdmin(token))
+                    if (_userManagement.CheckIfTokenIsValid(token) && _userManagement.CheckIfAdmin(connection, token))
                     {
                         _response = _packageManagement.CreatePackage(_request.GetCards());
                     }
@@ -155,7 +163,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
                     if (_userManagement.CheckIfTokenIsValid(token))
                     {
-                        Guid? userId = _userManagement.GetUserId(token);
+                        Guid? userId = _userManagement.GetUserId(connection, token);
                         if(userId != null)
                         {
                             _response = _userManagement.AquirePackage();

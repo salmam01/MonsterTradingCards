@@ -66,12 +66,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                throw;
+                return false;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error while checking for user: {e.Message}");
-                throw;
+                return false;
             }
         }
     }

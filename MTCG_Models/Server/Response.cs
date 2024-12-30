@@ -1,4 +1,5 @@
-﻿using Npgsql.Internal;
+﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+using Npgsql.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,16 +15,36 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         private readonly int _statusCode;
         private readonly string _status;
         private readonly string _contentType;
-        private string _message;
-        private readonly string _messageStr;
         private string _token;
+        private string _body;
+        private readonly string _bodyContent;
+        private bool bodyIsList = false;
+
+        //  For prettier formatting of json serialization
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
 
         public Response(int statusCode, string message)
         { 
             _statusCode = statusCode;
             _status = HTTPResponse.GetHeader(_statusCode);
             _contentType = $"Content-Type: application/json\r\n";
-            _messageStr = message;
+            _bodyContent = message;
+        }
+
+        public Response(int statusCode, List<Card> cards)
+        {
+            _statusCode = statusCode;
+            _status = HTTPResponse.GetHeader(_statusCode);
+            _contentType = $"Content-Type: application/json\r\n";
+
+            _bodyContent = JsonSerializer.Serialize(cards, _jsonOptions);
+            bodyIsList = true;
+            Console.WriteLine(_bodyContent);
         }
 
         public void SetToken(string token)
@@ -33,25 +54,46 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public string GetResponse()
         {
-            SetMessage();
-            return $"{_status}\r\n{_contentType}\r\n{_message}";
+            SetBody();
+            return $"{_status}\r\n{_contentType}\r\n{_body}";
         }
-        public void SetMessage()
+        public void SetBody()
         {
-            if (Parser.CheckIfValidString(_token))
+            if(!bodyIsList)
             {
-                _message = JsonSerializer.Serialize(new
+                if (Parser.CheckIfValidString(_token))
                 {
-                    message = _messageStr,
-                    token = _token
-                });
+                    _body = JsonSerializer.Serialize(new
+                    {
+                        message = _bodyContent,
+                        token = _token
+                    }, _jsonOptions);
+                }
+                else
+                {
+                    _body = JsonSerializer.Serialize(new
+                    {
+                        message = _bodyContent
+                    }, _jsonOptions);
+                }
             }
             else
             {
-                _message = JsonSerializer.Serialize(new
+                if (Parser.CheckIfValidString(_token))
                 {
-                    message = _messageStr
-                });
+                    _body = JsonSerializer.Serialize(new
+                    {
+                        message = JsonSerializer.Deserialize<JsonArray>(_bodyContent),
+                        token = _token
+                    }, _jsonOptions);
+                }
+                else
+                {
+                    _body = JsonSerializer.Serialize(new
+                    {
+                        message = JsonSerializer.Deserialize<JsonArray>(_bodyContent)
+                    }, _jsonOptions);
+                }
             }
         }
 
