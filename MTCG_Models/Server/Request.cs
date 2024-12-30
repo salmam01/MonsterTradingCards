@@ -16,6 +16,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         private Dictionary<string, string> _headers;
         private Dictionary<string, string> _body;
         private List<Card> _cards;
+        private List<string> _cardIds;
 
         public Request(string method, string path, string ver)
         {
@@ -32,6 +33,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public void SetBody(Dictionary<string, string> body)
         {
             _body = body;
+        }
+
+        public void SetCardIds(List<string> cardIds)
+        {
+            _cardIds = cardIds;
         }
 
         public void SetCards(List<Card> cards)
@@ -62,6 +68,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public List<Card> GetCards()
         {
             return _cards;
+        }
+
+        public List<string> GetCardIds()
+        {
+            return _cardIds;
         }
     }
 }

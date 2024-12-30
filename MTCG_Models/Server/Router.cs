@@ -97,6 +97,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     }
                     else
                     {
+                        Console.WriteLine("Unauthorized: invalid user token.");
                         _response = new(401, "Unauthorized.");
                     }
                     break;
@@ -108,6 +109,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     }
                     else
                     {
+                        Console.WriteLine("Unauthorized: invalid user token.");
                         _response = new(401, "Unauthorized.");
                     }
                     break;
@@ -155,6 +157,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     }
                     else
                     {
+                        Console.WriteLine("Unauthorized: invalid user token.");
                         _response = new(401, "Unauthorized.");
                     }
                     break;
@@ -176,6 +179,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     }
                     else
                     {
+                        Console.WriteLine("Unauthorized: invalid user token.");
                         _response = new(401, "Unauthorized.");
                     }
                     break;
@@ -188,22 +192,27 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             }
         }
 
-        //  PUT and DELETE will be implemented later
         public void PutRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
-            //string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             switch (path)
             {
                 case "/deck":
-                    _request = _parser.ParseBody();
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
+                    if (_userManagement.CheckIfTokenIsValid(token))
+                    {
+                        _request = _parser.ParseCardIds();
+                        _response = _userManagement.ConfigureUserDeck(_request.GetCardIds(), token);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unauthorized: invalid user token.");
+                        _response = new(401, "Unauthorized.");
+                    }
                     break;
 
                 default:
-                    _request = _parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     _response = new(404, "Invalid path.");
                     break;
@@ -218,13 +227,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             switch (path)
             {
                 case "/deck":
-                    _parser.ParseBody();
+                    //_parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     _response = new(404, "Invalid path.");
                     break;
 
                 default:
-                    _parser.ParseBody();
+                    //_parser.ParseBody();
                     Console.WriteLine("Invalid path.");
                     _response = new(404, "Invalid path.");
                     break;

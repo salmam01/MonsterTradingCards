@@ -340,6 +340,83 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             return new Response(0, "");
         }
 
+        public Response ConfigureUserDeck(List<string> cardIds, string token)
+        {
+            try
+            {
+                NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                Guid? userId = GetUserId(connection, token);
+                if (userId == null)
+                {
+                    Console.WriteLine("User ID is null.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                int stackSize = _cardManagement.GetStackSize(connection, userId.Value);
+                //  Check if there are cards in the stack
+                if (stackSize < 0)
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+                if (stackSize == 0)
+                {
+                    return new Response(409, "No cards in stack to add to deck.");
+                }
+
+                //  Check if the cards to add are in the user stack
+                if (!_cardManagement.CheckIfCardsInStack(connection, cardIds, userId.Value))
+                {
+                    return new Response(409, "Only cards in stack can be added to the deck.");
+                }
+                
+                //  Check if the cards to add are already in the user deck
+                if (_cardManagement.CheckIfCardIsAlreadyInDeck(connection, cardIds, userId.Value))
+                {
+                    return new Response(409, "Card is already in deck.");
+                }
+
+                //  Check if the cards to add are 5 maximum and don't exceed the deck limit
+                int cardCount = cardIds.Count;
+                int deckSize = _cardManagement.GetDeckSize(connection, userId.Value);
+                if(deckSize < 0)
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                int maxDeckSize = _cardManagement.GetMaxDeckSize();
+                int combinedCardCount = deckSize + cardCount;                
+                if (cardCount > maxDeckSize || combinedCardCount > maxDeckSize)
+                {
+                    Console.WriteLine($"Too many cards, deck can only hold 5 cards {cardCount}");
+                    return new Response(409, $"Too many cards added: {cardCount}. Deck can only hold up to {maxDeckSize}");
+                }
+
+                //  Add the cards to the user deck
+                if (!_cardManagement.AddCardsToDeck(connection, cardIds, userId.Value))
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                return new Response(200, "Deck updated successfully!");
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine("Connection to Database failed.");
+                return new Response(500, "Internal Server Error occured.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error occured while retrieving user deck.");
+                return new Response(500, "Internal Server Error occured.");
+            }
+        }
+
         //  Helper method that checks if a user has admin priviledges
         public bool CheckIfAdmin(NpgsqlConnection connection, string token)
         {
@@ -508,7 +585,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 return new Response(500, "Internal Server Error occured.");
             }
         }
-
 
         public bool CheckIfTokenIsValid(string token)
         {

@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS stack
     player_id UUID,
     card_id VARCHAR(255),
     PRIMARY KEY (player_id, card_id),
-    FOREIGN KEY (player_id, card_id) REFERENCES stack (player_id, card_id)
+    FOREIGN KEY (player_id) REFERENCES player_stats (player_id),
+    FOREIGN KEY (card_id) REFERENCES card (id)
 );
 
 CREATE TABLE IF NOT EXISTS deck 
