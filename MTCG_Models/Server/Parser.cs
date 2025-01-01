@@ -195,13 +195,10 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return token.Substring(7);
         }
 
-        /*public string ExtractUsername(string path)
+        public string ExtractUsername(string path)
         {
-            if()
-            {
-
-            }
-        }*/
+            return path.Substring("/users/".Length);
+        }
 
         //  Helper method to check for an empty string
         public static bool CheckIfValidString(string str)

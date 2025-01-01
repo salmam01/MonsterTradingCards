@@ -82,7 +82,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public void GetRequestHandler(string path)
         {
             Console.WriteLine($"Handling GET Request for {path}...");
-            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
             if(path == "/")
             {
@@ -90,9 +89,23 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 return;
             }
 
+            string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            if (token == null)
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
+                return;
+            }
+
             //  Makes better sense to always return the object they are requesting instead of a list etc!!!
             if (_userManagement.CheckIfTokenIsValid(token))
             {
+                string username = "";
+                if (path.StartsWith("/users/"))
+                {
+                    username = _parser.ExtractUsername(path);
+                }
+
                 switch (path)
                 {
                     case "/cards":
@@ -103,13 +116,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                         _response = _userManagement.GetUserDeck(token);
                         break;
 
+                    case "/deck?format=plain":
+                        _response = _userManagement.GetUserDeck(token);
+                        break;
+
                     case "/stats":
                         _response = _userManagement.GetUserStats(token);
                         break;
 
-                    case "/users/username":
-                        //  username needs to be extracted to be able to do this
-                        string username = "";
+                    case var usernamePath when usernamePath == $"/users/{username}":
                         _response = _userManagement.GetUserData(token, username);
                         break;
 
@@ -156,7 +171,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 return;
             }
 
-            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            if (token == null)
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
+                return;
+            }
+
             using NpgsqlConnection connection = _dbConnection.OpenConnection();
 
             if (_userManagement.CheckIfTokenIsValid(token))
@@ -203,10 +225,21 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public void PutRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
-            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            if (token == null)
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
+                return;
+            }
 
             if (_userManagement.CheckIfTokenIsValid(token))
             {
+                string username = "";
+                if (path.StartsWith("/users/"))
+                {
+                    username = _parser.ExtractUsername(path);
+                }
                 switch (path)
                 {
                     case "/deck":
@@ -214,10 +247,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                         _response = _userManagement.ConfigureUserDeck(_request.GetCardIds(), token);
                         break;
 
-                    case "/users/username":
-                        //  need to add username extraction
-                        string username = "";
-                        //_response = _userManagement.UpdateUserData(token, username);
+                    case var userPath when userPath == $"/users/{username}":
+                        //  Logic not fully there yet
+                        _request = _parser.ParseBody();
+                        //_response = _userManagement.UpdateUserData(_request.GetBody(), token, username);
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
                         break;
 
                     default:
@@ -236,7 +271,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public void DeleteRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
-            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            if (token == null)
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
+                return;
+            }
 
             if (_userManagement.CheckIfTokenIsValid(token))
             {

@@ -16,88 +16,24 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         private readonly int _statusCode;
         private readonly string _status;
         private readonly string _contentType;
-        private string _bodyContent;
+        private object _bodyObject;
 
         private string _token;
         private string _body;
 
-        //  For prettier formatting of json serialization
+        //  Options for prettier formatting of JSON serialization
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        public Response(int statusCode, object bodyContent)
+        public Response(int statusCode, object bodyObject)
         {
             _statusCode = statusCode;
             _status = HTTPResponse.GetHeader(_statusCode);
             _contentType = $"Content-Type: application/json\r\n";
-
-            SetBody(bodyContent);
-            Console.WriteLine(_bodyContent);
-        }
-
-        public void SetBody(object bodyContent)
-        {
-            if (bodyContent is List<Card>) 
-            {
-                _bodyContent = SerializeBody(bodyContent);
-                SetResponseWithList();
-            }
-            else if (bodyContent is string)
-            {
-                _bodyContent = (string)bodyContent;
-                SetResponse();
-            }
-            else
-            {
-                _bodyContent = SerializeBody(bodyContent);
-                SetResponse();
-            }
-        }
-
-        public void SetResponse()
-        {
-            if(_token != null)
-            {
-                _body = JsonSerializer.Serialize(new
-                {
-                    message = _bodyContent,
-                    token = _token
-                }, _jsonOptions);
-            }
-            else
-            {
-                _body = JsonSerializer.Serialize(new
-                {
-                    message = _bodyContent
-                }, _jsonOptions);
-            }
-        }
-
-        public void SetResponseWithList()
-        {
-            if (_token != null)
-            {
-                _body = JsonSerializer.Serialize(new
-                {
-                    message = JsonSerializer.Deserialize<JsonArray>(_bodyContent),
-                    token = _token
-                }, _jsonOptions);
-            }
-            else
-            {
-                _body = JsonSerializer.Serialize(new
-                {
-                    message = JsonSerializer.Deserialize<JsonArray>(_bodyContent),
-                }, _jsonOptions);
-            }
-        }
-
-        public string SerializeBody(object bodyContent)
-        {
-            return JsonSerializer.Serialize(bodyContent, _jsonOptions);
+            _bodyObject = bodyObject;
         }
 
         public void SetToken(string token)
@@ -105,8 +41,71 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             _token = token;
         }
 
+        public void SetBody()
+        {
+            string message;
+            if (_bodyObject is List<Card>) 
+            {
+                message = SerializeBody();
+                SetResponseWithList(message);
+            }
+            else if (_bodyObject is string)
+            {
+                message = (string)_bodyObject;
+                SetResponse(message);
+            }
+            else
+            {
+                message = SerializeBody();
+                SetResponse(message);
+            }
+        }
+        public string SerializeBody()
+        {
+            return JsonSerializer.Serialize(_bodyObject, _jsonOptions);
+        }
+
+        public void SetResponse(string message)
+        {
+            if(_token != null)
+            {
+                _body = JsonSerializer.Serialize(new
+                {
+                    message = message,
+                    token = _token
+                }, _jsonOptions);
+            }
+            else
+            {
+                _body = JsonSerializer.Serialize(new
+                {
+                    message = message
+                }, _jsonOptions);
+            }
+        }
+
+        public void SetResponseWithList(string message)
+        {
+            if (_token != null)
+            {
+                _body = JsonSerializer.Serialize(new
+                {
+                    message = JsonSerializer.Deserialize<JsonArray>(message),
+                    token = _token
+                }, _jsonOptions);
+            }
+            else
+            {
+                _body = JsonSerializer.Serialize(new
+                {
+                    message = JsonSerializer.Deserialize<JsonArray>(message),
+                }, _jsonOptions);
+            }
+        }
+
         public string GetResponse()
         {
+            SetBody();
             return $"{_status}\r\n{_contentType}\r\n{_body}";
         }
 

@@ -22,7 +22,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
         private readonly TokenManagement _tokenManagement;
         private readonly PackageManagement _packageManagement;
         private readonly CardManagement _cardManagement;
-        //private Guid _userId;   // NOT NEEDED - remove when time
 
         public UserManagement(DatabaseConnection dbConnection)
         {
@@ -285,16 +284,21 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
                 if (username != tokenUsername)
                 {
-                    Console.WriteLine($"User with token {token} is unauthorized to view user data of {username}.");
+                    Console.WriteLine($"User {tokenUsername} is unauthorized to view user data of {username}.");
                     return new Response(401, "Unauthorized.");
                 }
+
+                Console.WriteLine("Still working here.");
 
                 using NpgsqlCommand command = new("SELECT * FROM player WHERE username = @username");
                 command.Parameters.AddWithValue("username", username);
 
+
                 // Add query results to the user class
                 using var reader = command.ExecuteReader();
                 Response response;
+
+                Console.WriteLine("Still working here x2.");
 
                 if (reader.Read())
                 {
@@ -302,6 +306,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     string queryPassword = reader.GetString(reader.GetOrdinal("password"));
                     string queryBio = reader.GetString(reader.GetOrdinal("bio"));
                     string queryImage = reader.GetString(reader.GetOrdinal("image"));
+
+                    Console.WriteLine("Still working here x3.");
 
                     User user = new(queryUsername, queryPassword);
                     if (queryBio != null)
@@ -312,6 +318,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     {
                         user.Image = queryImage;
                     }
+                    Console.WriteLine("Still working here x4.");
+
 
                     response = new(200, user);
                     return response;
