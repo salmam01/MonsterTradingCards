@@ -71,7 +71,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             {
                 _body = JsonSerializer.Serialize(new
                 {
-                    message = message,
+                    message = _bodyObject,
                     token = _token
                 }, _jsonOptions);
             }
@@ -79,7 +79,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             {
                 _body = JsonSerializer.Serialize(new
                 {
-                    message = message
+                    message = _bodyObject
                 }, _jsonOptions);
             }
         }

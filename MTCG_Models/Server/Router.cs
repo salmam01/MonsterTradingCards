@@ -248,11 +248,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                         break;
 
                     case var userPath when userPath == $"/users/{username}":
-                        //  Logic not fully there yet
                         _request = _parser.ParseBody();
-                        //_response = _userManagement.UpdateUserData(_request.GetBody(), token, username);
-                        Console.WriteLine("Invalid path.");
-                        _response = new(404, "Invalid path.");
+                        _response = _userManagement.UpdateUserData(_request.GetBody(), token, username);
                         break;
 
                     default:

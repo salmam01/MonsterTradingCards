@@ -288,39 +288,47 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     return new Response(401, "Unauthorized.");
                 }
 
-                Console.WriteLine("Still working here.");
-
-                using NpgsqlCommand command = new("SELECT * FROM player WHERE username = @username");
+                using NpgsqlCommand command = new("SELECT * FROM player WHERE username = @username", connection);
                 command.Parameters.AddWithValue("username", username);
-
 
                 // Add query results to the user class
                 using var reader = command.ExecuteReader();
                 Response response;
 
-                Console.WriteLine("Still working here x2.");
-
                 if (reader.Read())
                 {
                     string queryUsername = reader.GetString(reader.GetOrdinal("username"));
                     string queryPassword = reader.GetString(reader.GetOrdinal("password"));
-                    string queryBio = reader.GetString(reader.GetOrdinal("bio"));
-                    string queryImage = reader.GetString(reader.GetOrdinal("image"));
-
-                    Console.WriteLine("Still working here x3.");
 
                     User user = new(queryUsername, queryPassword);
-                    if (queryBio != null)
-                    {
-                        user.Bio = queryBio;
-                    }
-                    if (queryImage != null)
-                    {
-                        user.Image = queryImage;
-                    }
-                    Console.WriteLine("Still working here x4.");
 
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                    {
+                        user.Name = reader.GetString(reader.GetOrdinal("name"));
+                    }
+                    else
+                    {
+                        user.Name = "";
+                    }
 
+                    if (!reader.IsDBNull(reader.GetOrdinal("bio")))
+                    {
+                        user.Bio = reader.GetString(reader.GetOrdinal("bio"));
+                    }
+                    else
+                    {
+                        user.Bio = "";
+                    }
+
+                    if (!reader.IsDBNull(reader.GetOrdinal("image")))
+                    {
+                        user.Image = reader.GetString(reader.GetOrdinal("image"));
+                    }
+                    else
+                    {
+                        user.Image = "";
+                    }
+                    
                     response = new(200, user);
                     return response;
                 }
@@ -358,7 +366,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                using NpgsqlCommand command = new("SELECT * FROM player_stats WHERE player_id = @userId");
+                using NpgsqlCommand command = new("SELECT * FROM player_stats WHERE player_id = @userId", connection);
                 command.Parameters.AddWithValue("userId", userId);
 
                 // Add query results to the user class
@@ -396,34 +404,58 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
         }
 
         //  Missing Implementation
-        public Response UpdateUserData(Dictionary<string, string> requestBody, string username, string token)
+        public Response UpdateUserData(Dictionary<string, string> requestBody, string token, string username)
         {
-            using NpgsqlConnection connection = _dbConnection.OpenConnection();
-            if (connection == null || connection.State != System.Data.ConnectionState.Open)
+            try
             {
-                Console.WriteLine("Connection to Database failed.");
-                return new Response(500, "Internal Server Error occured.");
-            }
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
 
-            string? tokenUsername = GetUsername(connection, token);
-            if (tokenUsername == null)
+                string? tokenUsername = GetUsername(connection, token);
+                if (tokenUsername == null)
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                if (username != tokenUsername)
+                {
+                    Console.WriteLine($"User with token {token} is unauthorized to view user data of {username}.");
+                    return new Response(401, "Unauthorized.");
+                }
+
+                Console.WriteLine(requestBody);
+
+                if(!requestBody.ContainsKey("Name") || !requestBody.ContainsKey("Bio") || !requestBody.ContainsKey("Image"))
+                {
+                    Console.WriteLine($"Data to change couldn't be found.");
+                    return new Response(409, "Data to change couldn't be found.");
+                }
+
+                using NpgsqlCommand command = new("UPDATE player SET name = @newName, bio = @newBio, image = @newImage WHERE username = @username", connection);
+                command.Parameters.AddWithValue("newName", requestBody["Name"]);
+                command.Parameters.AddWithValue("newBio", requestBody["Bio"]);
+                command.Parameters.AddWithValue("newImage", requestBody["Image"]);
+                command.Parameters.AddWithValue("username", username);
+                command.ExecuteNonQuery();
+                
+                return new Response(200, "User data updated successfully.");
+            }
+            catch (NpgsqlException e)
             {
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"Database error: {e.Message}");
+                return new Response(500, "Internal Server Error occurred.");
             }
-
-            if (username != tokenUsername)
+            catch (Exception e)
             {
-                Console.WriteLine($"User with token {token} is unauthorized to view user data of {username}.");
-                return new Response(401, "Unauthorized.");
+                Console.WriteLine($"Error occurred: {e.Message}");
+                return new Response(500, "Internal Server Error occurred.");
             }
-
-            using (NpgsqlTransaction transaction = connection.BeginTransaction())
-            {
-
-            }
-
-            return new Response(0, "");
         }
+
 
         public Response ConfigureUserDeck(List<string> cardIds, string token)
         {
@@ -443,8 +475,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                int stackSize = _cardManagement.GetStackSize(connection, userId.Value);
                 //  Check if there are cards in the stack
+                int stackSize = _cardManagement.GetStackSize(connection, userId.Value);
                 if (stackSize < 0)
                 {
                     return new Response(500, "Internal Server Error occured.");

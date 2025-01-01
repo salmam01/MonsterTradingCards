@@ -11,6 +11,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
         [JsonInclude][JsonPropertyName("Password")] private string _password;
         public string Bio { get; set; }
         public string Image { get; set; }
+        public string Name { get; set; }
 
         public struct PlayerStats
         {
@@ -29,11 +30,8 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
                 Losses = losses;
             }
         }
-        [JsonInclude] public PlayerStats Stats { get; set; } = new();
-        public User()
-        {
-            
-        }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public PlayerStats Stats { get; set; } = new();
+        public User() { }
 
         public User(string username, string password)
         {
@@ -46,7 +44,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
             Stats = new PlayerStats(elo, coins, gamesPlayed, wins, losses);
         }
 
-        public string GetPassword { get { return _password; } }
+        [JsonIgnore] public string GetPassword { get { return _password; } }
 
     }
 }

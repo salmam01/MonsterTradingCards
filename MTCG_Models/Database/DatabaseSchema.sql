@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS player
     token VARCHAR(255),
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(128) NOT NULL,
+    name VARCHAR(20),
     bio VARCHAR(255),
     image VARCHAR(10)
 );
