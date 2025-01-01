@@ -84,111 +84,119 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             Console.WriteLine($"Handling GET Request for {path}...");
             string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
-            switch (path)
+            if(path == "/")
             {
-                case "/":
-                    _response = new(200, "Welcome to Monster Trading Cards!");
-                    break;
+                _response = new(200, "Welcome to Monster Trading Cards!");
+                return;
+            }
 
-                case "/cards":
-                    if (_userManagement.CheckIfTokenIsValid(token))
-                    {
+            //  Makes better sense to always return the object they are requesting instead of a list etc!!!
+            if (_userManagement.CheckIfTokenIsValid(token))
+            {
+                switch (path)
+                {
+                    case "/cards":
                         _response = _userManagement.GetUserStack(token);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unauthorized: invalid user token.");
-                        _response = new(401, "Unauthorized.");
-                    }
-                    break;
+                        break;
 
-                case "/deck":
-                    if (_userManagement.CheckIfTokenIsValid(token))
-                    {
+                    case "/deck":
                         _response = _userManagement.GetUserDeck(token);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unauthorized: invalid user token.");
-                        _response = new(401, "Unauthorized.");
-                    }
-                    break;
+                        break;
 
-                case "/users/username":
-                    //  To be implemented
-                    //_response = _userManagement.GetUserData(_request.GetBody(), token);
-                    _response = new(404, "Invalid path.");
-                    break;
+                    case "/stats":
+                        _response = _userManagement.GetUserStats(token);
+                        break;
 
-                //  Path does not exist, send Error Response Code to Client
-                default:
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
-                    break;
+                    case "/users/username":
+                        //  username needs to be extracted to be able to do this
+                        string username = "";
+                        _response = _userManagement.GetUserData(token, username);
+                        break;
+
+                    case "/scoreboard":
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+
+                    case "/tradings":
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+
+                    //  Path does not exist, send Error Response Code to Client
+                    default:
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
             }
         }
 
         //  Method that handles POST Requests
         public void PostRequestHandler(string path)
         {
+            //  Can be split into further methods to handle authenticated vs unauthenticated routes
             Console.WriteLine($"Handling POST Request for {path}...");
-            using NpgsqlConnection connection = _dbConnection.OpenConnection();
-            string token;
 
-            switch (path)
+            if (path == "/users")
             {
-                case "/users":
-                    _request = _parser.ParseBody();
-                    _response = _userManagement.SignUp(_request.GetBody());
-                    break;
+                _request = _parser.ParseBody();
+                _response = _userManagement.SignUp(_request.GetBody());
+                return;
+            }
+            if (path == "/sessions")
+            {
+                _request = _parser.ParseBody();
+                _response = _userManagement.Login(_request.GetBody());
+                return;
+            }
 
-                case "/sessions":
-                    _request = _parser.ParseBody();
-                    _response = _userManagement.Login(_request.GetBody());
-                    break;
+            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            using NpgsqlConnection connection = _dbConnection.OpenConnection();
 
-                case "/packages":
-                    _request = _parser.ParseCards();
-                    token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
-                    
-                    if (_userManagement.CheckIfTokenIsValid(token) && _userManagement.CheckIfAdmin(connection, token))
-                    {
-                        _response = _packageManagement.CreatePackage(_request.GetCards());
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unauthorized: invalid user token.");
-                        _response = new(401, "Unauthorized.");
-                    }
-                    break;
+            if (_userManagement.CheckIfTokenIsValid(token))
+            {
+                switch (path)
+                {
+                    case "/packages":
+                        _request = _parser.ParseCards();
 
-                case "/transactions/packages":
-                    token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
-                    if (_userManagement.CheckIfTokenIsValid(token))
-                    {
-                        Guid? userId = _userManagement.GetUserId(connection, token);
-                        if(userId != null)
+                        if (_userManagement.CheckIfAdmin(connection, token))
                         {
-                            _response = _userManagement.AquirePackage();
+                            _response = _packageManagement.CreatePackage(_request.GetCards());
                         }
                         else
                         {
-                            Console.WriteLine("Username is null.");
-                            _response = new(500, "Internal Server Error occured.");
+                            Console.WriteLine("Unauthorized: user is not admin.");
+                            _response = new(401, "Unauthorized.");
                         }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unauthorized: invalid user token.");
-                        _response = new(401, "Unauthorized.");
-                    }
-                    break;
+                        break;
 
-                //  Path does not exist, send Error Response Code to Client
-                default:
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
-                    break;
+                    case "/transactions/packages":
+                        _response = _userManagement.AquirePackage(token);
+                        break;
+
+                    case "/tradings":
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+
+                    //  Path does not exist, send Error Response Code to Client
+                    default:
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
             }
         }
 
@@ -197,46 +205,65 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             Console.WriteLine($"Handling POST Request for {path}...");
             string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
-            switch (path)
+            if (_userManagement.CheckIfTokenIsValid(token))
             {
-                case "/deck":
-                    if (_userManagement.CheckIfTokenIsValid(token))
-                    {
+                switch (path)
+                {
+                    case "/deck":
                         _request = _parser.ParseCardIds();
                         _response = _userManagement.ConfigureUserDeck(_request.GetCardIds(), token);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unauthorized: invalid user token.");
-                        _response = new(401, "Unauthorized.");
-                    }
-                    break;
+                        break;
 
-                default:
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
-                    break;
+                    case "/users/username":
+                        //  need to add username extraction
+                        string username = "";
+                        //_response = _userManagement.UpdateUserData(token, username);
+                        break;
+
+                    default:
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
             }
         }
 
         public void DeleteRequestHandler(string path)
         {
             Console.WriteLine($"Handling POST Request for {path}...");
-            //string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+            string token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
 
-            switch (path)
+            if (_userManagement.CheckIfTokenIsValid(token))
             {
-                case "/deck":
-                    //_parser.ParseBody();
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
-                    break;
+                switch (path)
+                {
+                    case "/deck":
+                        //_parser.ParseBody();
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
 
-                default:
-                    //_parser.ParseBody();
-                    Console.WriteLine("Invalid path.");
-                    _response = new(404, "Invalid path.");
-                    break;
+                    case "/tradings":
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+
+                    default:
+                        //_parser.ParseBody();
+                        Console.WriteLine("Invalid path.");
+                        _response = new(404, "Invalid path.");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Unauthorized: invalid user token.");
+                _response = new(401, "Unauthorized.");
             }
         }
     }

@@ -14,7 +14,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
     public class CardManagement
     {
         private readonly DatabaseConnection _dbConnection;
-        private const int _maxDeckSize = 5;
+        private const int _maxDeckSize = 4;
 
         public CardManagement(DatabaseConnection dbConnection) 
         {

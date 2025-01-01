@@ -12,8 +12,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
         protected int _element;
         protected char _type;
 
-        public Card() { }
-
         public Card(string id, string name, double damage)
         {
             Id = id;

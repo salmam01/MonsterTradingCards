@@ -158,11 +158,50 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             return _request;
         }
 
+        public Request ParseUserData()
+        {
+            try
+            {
+                if (!CheckIfValidString(_bodyStr))
+                {
+                    Console.WriteLine("Invalid body string.");
+                }
+                _request.SetCardIds(JsonSerializer.Deserialize<List<string>>(_bodyStr));
+
+                if (_request.GetCards() == null)
+                {
+                    Console.WriteLine("Empty Card Ids.");
+                }
+
+                foreach (string cardId in _request.GetCardIds())
+                {
+                    Console.WriteLine(cardId);
+                }
+            }
+            catch (JsonException e)
+            {
+                Console.WriteLine("An error occured during Deserialization: " + e.Message);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Parsing request body failed: " + e.Message);
+            }
+            return _request;
+        }
+
         public string ExtractToken(string tokenStr)
         {
             string token = tokenStr.Trim();
             return token.Substring(7);
         }
+
+        /*public string ExtractUsername(string path)
+        {
+            if()
+            {
+
+            }
+        }*/
 
         //  Helper method to check for an empty string
         public static bool CheckIfValidString(string str)
