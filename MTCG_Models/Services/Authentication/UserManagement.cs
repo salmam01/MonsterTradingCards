@@ -568,7 +568,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                using NpgsqlCommand command = new("SELECT u.username, us.elo FROM player u JOIN player_stats us ON u.id = us.player_id ", connection);
+                using NpgsqlCommand command = new("SELECT u.username, s.elo FROM player u JOIN player_stats s ON u.id = s.player_id ORDER BY s.elo DESC", connection);
                 using var reader = command.ExecuteReader();
                 List<ScoreBoard> scoreboard = new();
 
