@@ -69,113 +69,40 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             _bodyStr = _bodyStr.Trim();
         }
 
-        public Request ParseBody()
+        public Request ParseBody(string type)
         {
             try
             {
-                if (!CheckIfValidString(_bodyStr))
+                if (_bodyStr == null)
                 {
                     Console.WriteLine("Invalid body string.");
                 }
-                _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
+                switch(type)
+                {
+                    case "dictionary":
+                        _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
+                        break;
+
+                    case "list":
+                        _request.SetCardIds(JsonSerializer.Deserialize<List<string>>(_bodyStr));
+                        break;
+
+                    case "card":
+                        _request.SetCards(JsonSerializer.Deserialize<List<Card>>(_bodyStr));
+                        break;
+
+                    case "user":
+                        //idk yet
+                        break;
+
+                    default:
+                        Console.WriteLine($"{type} is not supported.");
+                        break;
+                }
 
                 if (_request.GetBody() == null)
                 {
                     Console.WriteLine("Empty Body.");
-                }
-            }
-            catch (JsonException e)
-            {
-                Console.WriteLine("An error occured during Deserialization: " + e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Parsing request body failed: " + e.Message);
-            }
-            return _request;
-
-        }
-
-        public Request ParseCards()
-        {
-            try
-            {
-                if (!CheckIfValidString(_bodyStr))
-                {
-                    Console.WriteLine("Invalid body string.");
-                }
-                _request.SetCards(JsonSerializer.Deserialize<List<Card>>(_bodyStr));
-
-                if (_request.GetCards() == null)
-                {
-                    Console.WriteLine("Empty Cards.");
-                }
-
-                foreach (Card card in _request.GetCards())
-                {
-                    Console.WriteLine(card.Name);
-                }
-            }
-            catch (JsonException e)
-            {
-                Console.WriteLine("An error occured during Deserialization: " + e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Parsing request body failed: " + e.Message);
-            }
-            return _request;
-        }
-
-        public Request ParseCardIds()
-        {
-            try
-            {
-                if (!CheckIfValidString(_bodyStr))
-                {
-                    Console.WriteLine("Invalid body string.");
-                }
-                _request.SetCardIds(JsonSerializer.Deserialize<List<string>>(_bodyStr));
-
-                if (_request.GetCards() == null)
-                {
-                    Console.WriteLine("Empty Card Ids.");
-                }
-
-                foreach (string cardId in _request.GetCardIds())
-                {
-                    Console.WriteLine(cardId);
-                }
-            }
-            catch (JsonException e)
-            {
-                Console.WriteLine("An error occured during Deserialization: " + e.Message);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Parsing request body failed: " + e.Message);
-            }
-            return _request;
-        }
-
-        public Request ParseUserData()
-        {
-            try
-            {
-                if (!CheckIfValidString(_bodyStr))
-                {
-                    Console.WriteLine("Invalid body string.");
-                }
-                _request.SetCardIds(JsonSerializer.Deserialize<List<string>>(_bodyStr));
-
-                if (_request.GetCards() == null)
-                {
-                    Console.WriteLine("Empty Card Ids.");
-                }
-
-                foreach (string cardId in _request.GetCardIds())
-                {
-                    Console.WriteLine(cardId);
                 }
             }
             catch (JsonException e)

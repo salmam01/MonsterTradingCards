@@ -129,8 +129,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                         break;
 
                     case "/scoreboard":
-                        Console.WriteLine("Invalid path.");
-                        _response = new(404, "Invalid path.");
+                        _response = _userManagement.GetScoreboard();
                         break;
 
                     case "/tradings":
@@ -160,13 +159,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 
             if (path == "/users")
             {
-                _request = _parser.ParseBody();
+                _request = _parser.ParseBody("dictionary");
                 _response = _userManagement.SignUp(_request.GetBody());
                 return;
             }
             if (path == "/sessions")
             {
-                _request = _parser.ParseBody();
+                _request = _parser.ParseBody("dictionary");
                 _response = _userManagement.Login(_request.GetBody());
                 return;
             }
@@ -186,7 +185,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 switch (path)
                 {
                     case "/packages":
-                        _request = _parser.ParseCards();
+                        _request = _parser.ParseBody("card");
 
                         if (_userManagement.CheckIfAdmin(connection, token))
                         {
@@ -243,12 +242,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 switch (path)
                 {
                     case "/deck":
-                        _request = _parser.ParseCardIds();
+                        _request = _parser.ParseBody("list");
                         _response = _userManagement.ConfigureUserDeck(_request.GetCardIds(), token);
                         break;
 
                     case var userPath when userPath == $"/users/{username}":
-                        _request = _parser.ParseBody();
+                        _request = _parser.ParseBody("dictionary");
                         _response = _userManagement.UpdateUserData(_request.GetBody(), token, username);
                         break;
 

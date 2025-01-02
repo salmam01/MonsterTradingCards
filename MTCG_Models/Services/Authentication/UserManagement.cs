@@ -456,7 +456,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
         }
 
-
         public Response ConfigureUserDeck(List<string> cardIds, string token)
         {
             try
@@ -555,6 +554,46 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             {
                 Console.WriteLine($"Error occured during Admin Check: {e.Message}");
                 return false;
+            }
+        }
+
+        public Response GetScoreboard()
+        {
+            try
+            {
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                using NpgsqlCommand command = new("SELECT u.username, us.elo FROM player u JOIN player_stats us ON u.id = us.player_id ", connection);
+                using var reader = command.ExecuteReader();
+                List<ScoreBoard> scoreboard = new();
+
+                while (reader.Read())
+                {
+                    if(reader.IsDBNull(0) || reader.IsDBNull(1))
+                    {
+                        return new Response(500, "Internal Server Error occured.");
+                    }
+
+                    ScoreBoard sb = new(reader.GetString(0), reader.GetInt32(1));
+                    scoreboard.Add(sb);
+                }
+
+                return new Response(200, scoreboard);
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "Internal Server Error occured.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while getting Scoreboard: {e.Message}");
+                return new Response(500, "Internal Server Error occured.");
             }
         }
 

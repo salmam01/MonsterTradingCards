@@ -4,21 +4,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
 {
     public class ScoreBoard
     {
-        public ScoreBoard()
+        public string Username { get; set; }
+        public int Elo { get; set; }
+        public ScoreBoard(string username, int elo)
         {
-
-        }
-        //  should be vector
-        private int[] players;
-
-        public void PlayerRanking()
-        {
-
-        }
-
-        public void PlayerRank()
-        {
-
+            Username = username;
+            Elo = elo;
         }
     }
 }
