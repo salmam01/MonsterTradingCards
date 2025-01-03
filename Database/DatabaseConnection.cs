@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Database
+namespace MonsterTradingCardsGame.Database
 {
     public class DatabaseConnection
     {

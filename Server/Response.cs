@@ -1,4 +1,4 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+﻿using MonsterTradingCardsGame.Models;
 using Npgsql.Internal;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.Server
 {
     public class Response
     {
@@ -29,7 +29,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         };
 
         public Response(int statusCode, object bodyObject)
-        {            
+        {
             _statusCode = statusCode;
             _status = getStatusMessage();
             _contentType = $"Content-Type: application/json\r\n";
@@ -50,7 +50,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         public void SetBody()
         {
             string message;
-            if (_bodyObject is List<Card>) 
+            if (_bodyObject is List<Card>)
             {
                 message = SerializeBody();
                 SetResponseWithList(message);
@@ -73,7 +73,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
 
         public void SetResponse(string message)
         {
-            if(_token != null)
+            if (_token != null)
             {
                 _body = JsonSerializer.Serialize(new
                 {

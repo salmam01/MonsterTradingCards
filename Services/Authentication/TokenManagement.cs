@@ -1,5 +1,5 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Server;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
+namespace MonsterTradingCardsGame.Services.Authentication
 {
     public class TokenManagement
     {

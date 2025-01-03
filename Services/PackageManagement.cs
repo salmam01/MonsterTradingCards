@@ -1,6 +1,6 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Models;
-using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Models;
+using MonsterTradingCardsGame.Server;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Services
+namespace MonsterTradingCardsGame.Services
 {
     public class PackageManagement
     {
@@ -35,7 +35,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             {
                 try
                 {
-                    if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                    if (connection == null || connection.State != ConnectionState.Open)
                     {
                         Console.WriteLine("Connection to Database failed.");
                         return new Response(500, "Internal Server Error occured.");
@@ -104,7 +104,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     while (reader.Read())
                     {
                         string id;
-                        if(!reader.IsDBNull(0))
+                        if (!reader.IsDBNull(0))
                         {
                             id = reader.GetString(0);
                         }

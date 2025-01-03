@@ -1,5 +1,5 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Models;
+﻿using MonsterTradingCardsGame.Models;
+using MonsterTradingCardsGame.Database;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Services
+namespace MonsterTradingCardsGame.Services
 {
     public class CardManagement
     {
@@ -44,7 +44,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 
         public bool AddCardsToStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, List<string> cardIds)
         {
-            for(int i = 0; i < cardIds.Count; i++)
+            for (int i = 0; i < cardIds.Count; i++)
             {
                 using NpgsqlCommand command = new("INSERT INTO stack (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
                 command.Parameters.AddWithValue("userId", userId);
@@ -73,7 +73,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             }
             return true;
         }
-            
+
         public bool CheckIfCardsInStack(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
             for (int i = 0; i < cardIds.Count; i++)
@@ -116,7 +116,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM stack s INNER JOIN card c ON s.card_id = c.id WHERE s.user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
             using var reader = command.ExecuteReader();
-                
+
             while (reader.Read())
             {
                 string id;

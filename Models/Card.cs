@@ -2,7 +2,7 @@
 using System.Reflection.PortableExecutable;
 using System.Text.Json.Serialization;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Models
+namespace MonsterTradingCardsGame.Models
 {
     public class Card
     {

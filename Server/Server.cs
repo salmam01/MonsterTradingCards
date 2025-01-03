@@ -11,13 +11,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Models;
-using MonsterTradingCardsGame.MTCG_Models.Services;
 using System.Reflection.Metadata;
 using System.Transactions;
+using MonsterTradingCardsGame.Database;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.Server
 {
     public class Server
     {
@@ -104,7 +102,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 // Translate data bytes to an ASCII string.
                 requestStr = Encoding.UTF8.GetString(bytes, 0, bytesRead);
 
-                if(bytesRead <= 0)
+                if (bytesRead <= 0)
                 {
                     Console.WriteLine("Request is empty, server is closing connection.");
                     return;

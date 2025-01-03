@@ -1,6 +1,6 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Server;
-using MonsterTradingCardsGame.MTCG_Models.Services.Authentication;
+﻿using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Services;
+using MonsterTradingCardsGame.Services.Authentication;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Services
+namespace MonsterTradingCardsGame.Server
 {
     public class Router
     {
@@ -24,7 +24,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         {
             _dbConnection = new();
             _parser = new(requestStr);
-            _userManagement = new(_dbConnection);
+            _userManagement = new(_dbConnection, shopId);
             _packageManagement = new(_dbConnection, shopId);
         }
 
@@ -83,7 +83,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         {
             Console.WriteLine($"Handling GET Request for {path}...");
 
-            if(path == "/")
+            if (path == "/")
             {
                 _response = new(200, "Welcome to Monster Trading Cards!");
                 return;

@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.Server
 {
     public class StatusMessage
     {

@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Reflection.Metadata.Ecma335;
 using System.Text.Json.Serialization;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Models
+namespace MonsterTradingCardsGame.Models
 {
     public class User
     {

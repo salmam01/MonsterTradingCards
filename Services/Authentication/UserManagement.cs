@@ -1,6 +1,7 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Database;
-using MonsterTradingCardsGame.MTCG_Models.Models;
-using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Models;
+using MonsterTradingCardsGame.Server;
+using MonsterTradingCardsGame.Services;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
+namespace MonsterTradingCardsGame.Services.Authentication
 {
     public class UserManagement
     {
@@ -24,11 +25,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
         private readonly PackageManagement _packageManagement;
         private readonly CardManagement _cardManagement;
 
-        public UserManagement(DatabaseConnection dbConnection)
+        public UserManagement(DatabaseConnection dbConnection, int shopId)
         {
             _dbConnection = dbConnection;
             _tokenManagement = new();
-            _packageManagement = new(_dbConnection, 1);
+            _packageManagement = new(_dbConnection, shopId);
             _cardManagement = new();
         }
 
@@ -40,7 +41,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             {
                 try
                 {
-                    if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                    if (connection == null || connection.State != ConnectionState.Open)
                     {
                         Console.WriteLine($"Connection to Database failed.");
                         return new Response(500, "An internal server error occurred.");
@@ -121,7 +122,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -193,7 +194,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -275,7 +276,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -333,7 +334,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     {
                         user.Image = "";
                     }
-                    
+
                     response = new(200, user);
                     return response;
                 }
@@ -358,7 +359,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -413,7 +414,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -433,7 +434,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
                 Console.WriteLine(requestBody);
 
-                if(!requestBody.ContainsKey("Name") || !requestBody.ContainsKey("Bio") || !requestBody.ContainsKey("Image"))
+                if (!requestBody.ContainsKey("Name") || !requestBody.ContainsKey("Bio") || !requestBody.ContainsKey("Image"))
                 {
                     Console.WriteLine($"Data to change couldn't be found.");
                     return new Response(409, "Data to change couldn't be found.");
@@ -474,7 +475,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -502,7 +503,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 {
                     return new Response(409, "Only cards in stack can be added to the deck.");
                 }
-                
+
                 //  Check if the cards to add are already in the user deck
                 if (_cardManagement.CheckIfCardInDeck(connection, cardIds, userId.Value))
                 {
@@ -512,13 +513,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 //  Check if the cards to add are 5 maximum and don't exceed the deck limit
                 int cardCount = cardIds.Count;
                 int deckSize = _cardManagement.GetDeckSize(connection, userId.Value);
-                if(deckSize < 0)
+                if (deckSize < 0)
                 {
                     return new Response(500, "Internal Server Error occured.");
                 }
 
                 int maxDeckSize = _cardManagement.GetMaxDeckSize();
-                int combinedCardCount = deckSize + cardCount;                
+                int combinedCardCount = deckSize + cardCount;
                 if (cardCount > maxDeckSize || combinedCardCount > maxDeckSize)
                 {
                     Console.WriteLine($"Too many cards, deck can only hold 5 cards {cardCount}");
@@ -564,7 +565,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -602,7 +603,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -639,7 +640,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -651,7 +652,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
                 while (reader.Read())
                 {
-                    if(reader.IsDBNull(0) || reader.IsDBNull(1))
+                    if (reader.IsDBNull(0) || reader.IsDBNull(1))
                     {
                         return new Response(500, "Internal Server Error occured.");
                     }

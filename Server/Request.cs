@@ -1,11 +1,11 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Models;
+﻿using MonsterTradingCardsGame.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.Server
 {
     //  Class to store requests in
     public class Request

@@ -1,5 +1,4 @@
-﻿using MonsterTradingCardsGame.MTCG_Models.Models;
-using MonsterTradingCardsGame.MTCG_Models.Server;
+﻿using MonsterTradingCardsGame.Models;
 using Npgsql.Internal;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace MonsterTradingCardsGame.MTCG_Models.Server
+namespace MonsterTradingCardsGame.Server
 {
     public class Parser
     {
@@ -35,7 +34,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
             //  First line of the HTTP request contains the method, path and HTTP version
             string[] firstLine = _requestStrLines[0].Split(" ");
             _request = new(firstLine[0].Trim(), firstLine[1].Trim(), firstLine[2].Trim());
-            
+
             ParseHeaders();
             if (_request.GetHeaders() == null)
             {
@@ -77,7 +76,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                 {
                     Console.WriteLine("Invalid body string.");
                 }
-                switch(type)
+                switch (type)
                 {
                     case "dictionary":
                         _request.SetBody(JsonSerializer.Deserialize<Dictionary<string, string>>(_bodyStr));
