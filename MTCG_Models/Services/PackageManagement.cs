@@ -74,13 +74,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 {
                     transaction.Rollback();
                     Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                    return new Response(500, "Internal Server Error occured.");
+                    return new Response(500, "An internal server error occurred.");
                 }
                 catch (Exception e)
                 {
                     transaction.Rollback();
-                    Console.WriteLine($"Error occured during login: {e.Message}");
-                    return new Response(500, "Internal Server Error occured.");
+                    Console.WriteLine($"An error occurred while creating package: {e.Message}");
+                    return new Response(500, "An internal server error occurred.");
                 }
             }
         }

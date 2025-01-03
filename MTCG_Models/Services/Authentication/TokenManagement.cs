@@ -56,29 +56,16 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 
         public bool CheckIfTokenIsValid(NpgsqlConnection connection, string token)
         {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT username FROM users WHERE token = @token", connection);
-                command.Parameters.AddWithValue("token", token);
-                object resultObj = command.ExecuteScalar();
+            using NpgsqlCommand command = new("SELECT username FROM users WHERE token = @token", connection);
+            command.Parameters.AddWithValue("token", token);
+            object resultObj = command.ExecuteScalar();
 
-                if (resultObj == null)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-            catch (NpgsqlException e)
+            if (resultObj == null)
             {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
                 return false;
             }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error while checking for user: {e.Message}");
-                return false;
-            }
+
+            return true;
         }
     }
 }

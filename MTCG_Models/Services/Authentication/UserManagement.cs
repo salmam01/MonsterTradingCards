@@ -40,6 +40,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             {
                 try
                 {
+                    if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                    {
+                        Console.WriteLine($"Connection to Database failed.");
+                        return new Response(500, "An internal server error occurred.");
+                    }
+
                     string username = requestBody["Username"];
                     string password = requestBody["Password"];
 
@@ -54,11 +60,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                         return new Response(400, "Password cannot be empty.");
                     }
 
-                    if (connection == null || connection.State != System.Data.ConnectionState.Open)
-                    {
-                        Console.WriteLine($"Connection to Database failed.");
-                        return new Response(500, "An internal server error occurred.");
-                    }
                     if (CheckIfUserExists(connection, username))
                     {
                         Console.WriteLine("User already exists.");
@@ -96,13 +97,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                 {
                     transaction.Rollback();
                     Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                    return new Response(500, "Internal Server Error occured.");
+                    return new Response(500, "An internal server error occurred.");
                 }
                 catch (Exception e)
                 {
                     transaction.Rollback();
-                    Console.WriteLine($"Error occurred while trying to signup user: {e.Message}");
-                    return new Response(500, "Internal Server Error occured.");
+                    Console.WriteLine($"An error occurred during signup: {e.Message}");
+                    return new Response(500, "An internal server error occurred.");
                 }
             }
         }
@@ -120,6 +121,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
                 string username = requestBody["Username"];
                 string password = requestBody["Password"];
 
@@ -134,14 +141,9 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
                     return new Response(400, "Password cannot be empty.");
                 }
 
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
-                {
-                    Console.WriteLine("Connection to Database failed.");
-                    return new Response(500, "Internal Server Error occured.");
-                }
                 if (!CheckIfUserExists(connection, username))
                 {
-                    Console.WriteLine("User doesn't exist.");
+                    Console.WriteLine("User not found.");
                     return new Response(401, "Incorrect Username or Password.");
                 }
 
@@ -177,12 +179,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred during login: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -259,12 +261,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while aquiring package: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -342,12 +344,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error occured while retrieving user data: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while retrieving user data: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -395,13 +397,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (NpgsqlException e)
             {
-                Console.WriteLine("Connection to Database failed.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error occured while retrieving user stats.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while retrieving user stats: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -457,13 +459,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (NpgsqlException e)
             {
-                Console.WriteLine($"Database error: {e.Message}");
-                return new Response(500, "Internal Server Error occurred.");
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error occurred: {e.Message}");
-                return new Response(500, "Internal Server Error occurred.");
+                Console.WriteLine($"An error occurred while updating user data: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -537,13 +539,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (NpgsqlException e)
             {
-                Console.WriteLine("Connection to Database failed.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error occured while retrieving user deck.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while configuring user deck: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -585,13 +587,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             }
             catch (NpgsqlException e)
             {
-                Console.WriteLine("Connection to Database failed.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error occured while retrieving user stack.");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while retrieving user stack: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -623,12 +625,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "An internal server error occured.");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error occured while retrieving user deck: {e.Message}");
-                return new Response(500, "An internal server error occured.");
+                Console.WriteLine($"An error occurred while retrieving user deck: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
@@ -663,12 +665,12 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             catch (NpgsqlException e)
             {
                 Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                return new Response(500, "An internal server error occurred.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error while retrieving Scoreboard: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
+                Console.WriteLine($"An error occurred while retrieving scoreboard: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
             }
         }
 
