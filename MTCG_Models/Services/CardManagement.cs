@@ -13,65 +13,44 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 {
     public class CardManagement
     {
-        private readonly DatabaseConnection _dbConnection;
         private const int _maxDeckSize = 4;
 
-        public CardManagement(DatabaseConnection dbConnection) 
+        public bool AddCardsToDatabase(NpgsqlConnection connection, NpgsqlTransaction transaction, List<Card> cards, Guid packageId)
         {
-            _dbConnection = dbConnection;
-        }
-
-        public bool AddCardsToDatabase(List<Card> cards, Guid packageId)
-        {
-            using NpgsqlConnection connection = _dbConnection.OpenConnection();
-            using var transaction = connection.BeginTransaction();
-            try
+            foreach (var card in cards)
             {
-                foreach (var card in cards)
+                if (CheckIfCardExists(connection, card.Id))
                 {
-                    if (CheckIfCardExists(connection, card.Id))
-                    {
-                        Console.WriteLine($"Card {card.Name} with ID {card.Id} already exists, aborting transaction.");
-                        transaction.Rollback();
-                        return false;
-                    }
-
-                    using NpgsqlCommand command = new("INSERT INTO card (id, name, damage, package_id) VALUES (@id, @name, @damage, @packageId)", connection);
-                    command.Parameters.AddWithValue("id", card.Id);
-                    command.Parameters.AddWithValue("name", card.Name);
-                    command.Parameters.AddWithValue("damage", card.Damage);
-                    command.Parameters.AddWithValue("packageId", packageId);
-                    command.ExecuteNonQuery();
-
-                    Console.WriteLine($"{card.Name} has been added to database!");
+                    Console.WriteLine($"Card {card.Name} with ID {card.Id} already exists, aborting transaction.");
+                    return false;
                 }
 
-                transaction.Commit();
-                return true;
+                using NpgsqlCommand command = new("INSERT INTO card (id, name, damage, package_id) VALUES (@id, @name, @damage, @packageId)", connection, transaction);
+                command.Parameters.AddWithValue("id", card.Id);
+                command.Parameters.AddWithValue("name", card.Name);
+                command.Parameters.AddWithValue("damage", card.Damage);
+                command.Parameters.AddWithValue("packageId", packageId);
+
+                if (command.ExecuteNonQuery() == 0)
+                {
+                    Console.WriteLine($"Error occurred while adding card {card.Name} to database.");
+                    return false;
+                }
+
+                Console.WriteLine($"{card.Name} has been added to database!");
             }
-            catch (NpgsqlException e)
-            {
-                transaction.Rollback();
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                transaction.Rollback();
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return false;
-            }
+            return true;
         }
 
-        public bool AddCardsToStack(Guid userId, List<string> cardIds, NpgsqlConnection connection, NpgsqlTransaction transaction)
+        public bool AddCardsToStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, List<string> cardIds)
         {
             for(int i = 0; i < cardIds.Count; i++)
             {
                 using NpgsqlCommand command = new("INSERT INTO stack (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
                 command.Parameters.AddWithValue("userId", userId);
                 command.Parameters.AddWithValue("cardId", cardIds[i]);
-                int rowsAffected = command.ExecuteNonQuery();
-                if(rowsAffected <= 0)
+
+                if (command.ExecuteNonQuery() == 0)
                 {
                     return false;
                 }
@@ -79,15 +58,15 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             return true;
         }
 
-        public bool AddCardsToDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
+        public bool AddCardsToDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, List<string> cardIds, Guid userId)
         {
             for (int i = 0; i < cardIds.Count; i++)
             {
-                using NpgsqlCommand command = new("INSERT INTO deck (user_id, card_id) VALUES (@userId, @cardId)", connection);
+                using NpgsqlCommand command = new("INSERT INTO deck (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
                 command.Parameters.AddWithValue("userId", userId);
                 command.Parameters.AddWithValue("cardId", cardIds[i]);
-                int rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected <= 0)
+
+                if (command.ExecuteNonQuery() == 0)
                 {
                     return false;
                 }
@@ -113,7 +92,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             return true;
         }
 
-        public bool CheckIfCardIsAlreadyInDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
+        public bool CheckIfCardInDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
             for (int i = 0; i < cardIds.Count; i++)
             {

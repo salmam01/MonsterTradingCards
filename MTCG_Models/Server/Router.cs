@@ -34,11 +34,11 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
             _request = _parser.ParseRequest();
             if (_request == null)
             {
-                return _response = new(400, "Malformed Request Syntax.");
+                return _response = new(400, "Malformed request syntax.");
             }
-            if (!Parser.CheckIfValidString(_request.GetMethod()) || !Parser.CheckIfValidString(_request.GetPath()))
+            if (_request.GetMethod() == null || _request.GetPath() == null)
             {
-                return _response = new(400, "Method or Path is missing from the request.");
+                return _response = new(400, "Malformed request syntax.");
             }
             if (_request.GetHeaders() == null)
             {

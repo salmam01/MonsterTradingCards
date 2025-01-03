@@ -13,25 +13,34 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 {
     public class TokenManagement
     {
-        public string? GenerateToken(NpgsqlConnection connection, string username)
+        public string? CreateToken(NpgsqlConnection connection, NpgsqlTransaction transaction, string username)
         {
-            string token = username + "-mtcgToken";
+            string? token = GenerateToken(username);
 
-            if (AddTokenToDatabase(connection, username, token))
+            if (token == null)
             {
-                Console.WriteLine($"{token} has been added to database!");
-                return token;
-            }
-            else
-            {
-                Console.WriteLine("No user found with that username.");
+                Console.WriteLine($"Failed to generate token for {username}");
                 return null;
             }
+
+            if (!AddTokenToDatabase(connection, transaction, username, token))
+            {
+                Console.WriteLine($"No user {username} found.");
+                return null;
+            }
+
+            Console.WriteLine($"{token} has been added to database!");
+            return token;
         }
 
-        public bool AddTokenToDatabase(NpgsqlConnection connection, string username, string token)
+        public string? GenerateToken(string username)
         {
-            using NpgsqlCommand command = new("UPDATE users SET token = @token WHERE username = @username", connection);
+            return username + "-mtcgToken";
+        }
+
+        public bool AddTokenToDatabase(NpgsqlConnection connection, NpgsqlTransaction transaction, string username, string token)
+        {
+            using NpgsqlCommand command = new("UPDATE users SET token = @token WHERE username = @username", connection, transaction);
 
             command.Parameters.AddWithValue("username", username);
             command.Parameters.AddWithValue("token", token);

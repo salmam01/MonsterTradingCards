@@ -121,15 +121,5 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         {
             return path.Substring("/users/".Length);
         }
-
-        //  Helper method to check for an empty string
-        public static bool CheckIfValidString(string str)
-        {
-            if (string.IsNullOrEmpty(str) || string.IsNullOrWhiteSpace(str) || str.Length <= 0)
-            {
-                return false;
-            }
-            return true;
-        }
     }
 }

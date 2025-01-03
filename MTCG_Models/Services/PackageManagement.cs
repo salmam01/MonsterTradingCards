@@ -24,56 +24,64 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
         public PackageManagement(DatabaseConnection dbConnection, int shopId)
         {
             _dbConnection = dbConnection;
-            _cardManagement = new(_dbConnection);
+            _cardManagement = new();
             _shopId = shopId;
         }
 
         public Response CreatePackage(List<Card> cards)
         {
-            try
+            using NpgsqlConnection connection = _dbConnection.OpenConnection();
+            using (NpgsqlTransaction transaction = connection.BeginTransaction())
             {
-                using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                try
                 {
-                    Console.WriteLine("Connection to Database failed.");
+                    if (connection == null || connection.State != System.Data.ConnectionState.Open)
+                    {
+                        Console.WriteLine("Connection to Database failed.");
+                        return new Response(500, "Internal Server Error occured.");
+                    }
+                    if (cards.Count != _packageSize)
+                    {
+                        return new Response(403, "A package can only contain 5 cards..");
+                    }
+
+                    //  Create a new package
+                    using NpgsqlCommand command = new("INSERT INTO package (shop_id) VALUES (@shopId) RETURNING id", connection);
+                    command.Parameters.AddWithValue("shopId", _shopId);
+
+                    //  Retrieve the new package id
+                    Guid? packageId = (Guid?)command.ExecuteScalar();
+                    if (packageId == null)
+                    {
+                        transaction.Rollback();
+                        Console.WriteLine("Error occured while retrieving package ID.");
+                        return new Response(500, "An internal server error occurred.");
+                    }
+                    Console.WriteLine($"Package with ID {packageId} has been added to the database.");
+
+                    //  Add cards to the database
+                    if (!_cardManagement.AddCardsToDatabase(connection, transaction, cards, packageId.Value))
+                    {
+                        transaction.Rollback();
+                        return new Response(403, "Card already exists.");
+                    }
+                    transaction.Commit();
+
+                    Console.WriteLine($"Cards have been added to the package.");
+                    return new Response(201, "Package and cards successfully created.");
+                }
+                catch (NpgsqlException e)
+                {
+                    transaction.Rollback();
+                    Console.WriteLine($"Failed to connect to Database: {e.Message}");
                     return new Response(500, "Internal Server Error occured.");
                 }
-                if (cards.Count != _packageSize)
+                catch (Exception e)
                 {
-                    return new Response(403, "A package can only contain 5 cards..");
+                    transaction.Rollback();
+                    Console.WriteLine($"Error occured during login: {e.Message}");
+                    return new Response(500, "Internal Server Error occured.");
                 }
-
-                //  Create a new package
-                using NpgsqlCommand command = new("INSERT INTO package (shop_id) VALUES (@shopId) RETURNING id", connection);
-                command.Parameters.AddWithValue("shopId", _shopId);
-
-                //  Retrieve the new package id
-                Guid? packageId = (Guid?)command.ExecuteScalar();
-                if (packageId == null)
-                {
-                    Console.WriteLine("Error occured while retrieving package ID.");
-                    return new Response(500, "An internal server error occurred.");
-                }
-                Console.WriteLine($"Package with ID {packageId} has been added to the database.");
-
-                //  Add cards to the database
-                if (!_cardManagement.AddCardsToDatabase(cards, packageId.Value))
-                {
-                    return new Response(403, "Card already exists.");
-                }
-
-                Console.WriteLine($"Cards have been added to the package.");
-                return new Response(201, "Package and cards successfully created.");
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return new Response(500, "Internal Server Error occured.");
             }
         }
 
@@ -108,20 +116,31 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                     }
                 }
             }
-            
             return cardIds;
         }
 
         public bool DeletePackage(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid packageId)
         {
-            using var deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", connection, transaction);
-            deletePackageId.Parameters.AddWithValue("packageId", packageId);
-            deletePackageId.ExecuteNonQuery();
-                
-            using var deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", connection, transaction);                
-            deletePackage.Parameters.AddWithValue("packageId", packageId);
-            deletePackage.ExecuteNonQuery();
-                
+            using (NpgsqlCommand deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", connection, transaction))
+            {
+                deletePackageId.Parameters.AddWithValue("packageId", packageId);
+                int rowsAffected = deletePackageId.ExecuteNonQuery();
+                if (rowsAffected <= 0)
+                {
+                    return false;
+                }
+            }
+
+            using (NpgsqlCommand deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", connection, transaction))
+            {
+                deletePackage.Parameters.AddWithValue("packageId", packageId);
+                int rowsAffected = deletePackage.ExecuteNonQuery();
+                if (rowsAffected <= 0)
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 
