@@ -13,7 +13,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
         public string Image { get; set; }
         public string Name { get; set; }
 
-        public struct PlayerStats
+        public struct UserStats
         {
             public int Elo { get; set; }
             public int Coins { get; set; }
@@ -21,7 +21,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
             public int Wins { get; set; }
             public int Losses { get; set; }
 
-            public PlayerStats(int elo, int coins, int gamesPlayed, int wins, int losses)
+            public UserStats(int elo, int coins, int gamesPlayed, int wins, int losses)
             {
                 Elo = elo;
                 Coins = coins;
@@ -30,7 +30,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
                 Losses = losses;
             }
         }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public PlayerStats Stats { get; set; } = new();
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserStats Stats { get; set; } = new();
         public User() { }
 
         public User(string username, string password)
@@ -41,7 +41,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Models
 
         public void SetUserStats(int elo, int coins, int gamesPlayed, int wins, int losses)
         {
-            Stats = new PlayerStats(elo, coins, gamesPlayed, wins, losses);
+            Stats = new UserStats(elo, coins, gamesPlayed, wins, losses);
         }
 
         [JsonIgnore] public string GetPassword { get { return _password; } }

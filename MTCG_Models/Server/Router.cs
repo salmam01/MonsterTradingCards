@@ -280,7 +280,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
                 switch (path)
                 {
                     case "/deck":
-                        //_parser.ParseBody();
                         Console.WriteLine("Invalid path.");
                         _response = new(404, "Invalid path.");
                         break;

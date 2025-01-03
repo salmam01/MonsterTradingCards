@@ -79,77 +79,50 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 
         public Guid? GetRandomPackageId(NpgsqlConnection connection)
         {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT id FROM package WHERE shop_id = @shopId ORDER BY RANDOM() LIMIT 1", connection);
-                command.Parameters.AddWithValue("shopId", _shopId);
-                Guid? randomId = (Guid?)command.ExecuteScalar();
-                return randomId;
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return null;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured during package counting: {e.Message}");
-                return null;
-            }
+            using NpgsqlCommand command = new("SELECT id FROM package WHERE shop_id = @shopId ORDER BY RANDOM() LIMIT 1", connection);
+            command.Parameters.AddWithValue("shopId", _shopId);
+            return (Guid?)command.ExecuteScalar();
         }
 
         public List<string> GetCardIds(NpgsqlConnection connection, Guid packageId)
         {
             List<string> cardIds = new();
-            try
+
+            using (var command = new NpgsqlCommand("SELECT id FROM card WHERE package_id = @packageId", connection))
             {
-                using (var command = new NpgsqlCommand("SELECT id FROM card WHERE package_id = @packageId", connection))
+                command.Parameters.AddWithValue("packageId", packageId);
+                using (var reader = command.ExecuteReader())
                 {
-                    command.Parameters.AddWithValue("packageId", packageId);
-                    using (var reader = command.ExecuteReader())
+                    while (reader.Read())
                     {
-                        while (reader.Read())
+                        string id;
+                        if(!reader.IsDBNull(0))
                         {
-                            cardIds.Add(reader["id"].ToString());
+                            id = reader.GetString(0);
                         }
+                        else
+                        {
+                            id = "";
+                        }
+                        cardIds.Add(id);
                     }
                 }
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error while deleting package: {e.Message}");
-            }
+            
             return cardIds;
         }
 
         public bool DeletePackage(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid packageId)
         {
-            try
-            {
-                using var deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", connection, transaction);
-                deletePackageId.Parameters.AddWithValue("packageId", packageId);
-                deletePackageId.ExecuteNonQuery();
+            using var deletePackageId = new NpgsqlCommand("UPDATE card SET package_id = NULL WHERE package_id = @packageId", connection, transaction);
+            deletePackageId.Parameters.AddWithValue("packageId", packageId);
+            deletePackageId.ExecuteNonQuery();
                 
-                using var deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", connection, transaction);                
-                deletePackage.Parameters.AddWithValue("packageId", packageId);
-                deletePackage.ExecuteNonQuery();
+            using var deletePackage = new NpgsqlCommand("DELETE FROM package WHERE id = @packageId", connection, transaction);                
+            deletePackage.Parameters.AddWithValue("packageId", packageId);
+            deletePackage.ExecuteNonQuery();
                 
-                return true;
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error while deleting package: {e.Message}");
-                return false;
-            }
+            return true;
         }
 
         public int GetPackageCost()

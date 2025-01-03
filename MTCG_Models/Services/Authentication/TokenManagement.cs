@@ -13,7 +13,7 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
 {
     public class TokenManagement
     {
-        public string GenerateToken(NpgsqlConnection connection, string username)
+        public string? GenerateToken(NpgsqlConnection connection, string username)
         {
             string token = username + "-mtcgToken";
 
@@ -25,13 +25,13 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             else
             {
                 Console.WriteLine("No user found with that username.");
-                return "";
+                return null;
             }
         }
 
         public bool AddTokenToDatabase(NpgsqlConnection connection, string username, string token)
         {
-            using NpgsqlCommand command = new("UPDATE player SET token = @token WHERE username = @username", connection);
+            using NpgsqlCommand command = new("UPDATE users SET token = @token WHERE username = @username", connection);
 
             command.Parameters.AddWithValue("username", username);
             command.Parameters.AddWithValue("token", token);
@@ -42,17 +42,14 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services.Authentication
             {
                 return true;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         public bool CheckIfTokenIsValid(NpgsqlConnection connection, string token)
         {
             try
             {
-                using NpgsqlCommand command = new("SELECT username FROM player WHERE token = @token", connection);
+                using NpgsqlCommand command = new("SELECT username FROM users WHERE token = @token", connection);
                 command.Parameters.AddWithValue("token", token);
                 object resultObj = command.ExecuteScalar();
 

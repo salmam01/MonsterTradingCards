@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS player 
+CREATE TABLE IF NOT EXISTS users 
 (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     token VARCHAR(255),
@@ -9,15 +9,15 @@ CREATE TABLE IF NOT EXISTS player
     image VARCHAR(10)
 );
 
-CREATE TABLE IF NOT EXISTS player_stats 
+CREATE TABLE IF NOT EXISTS user_stats 
 (
     elo INT DEFAULT 100 NOT NULL,
     coins INT DEFAULT 20 NOT NULL,
     games_played INT DEFAULT 0 NOT NULL,
     wins INT DEFAULT 0 NOT NULL,
     losses INT DEFAULT 0 NOT NULL,
-    player_id UUID UNIQUE,
-    FOREIGN KEY (player_id) REFERENCES player (id)
+    user_id UUID UNIQUE,
+    FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS shop 
@@ -43,17 +43,17 @@ CREATE TABLE IF NOT EXISTS card
 
 CREATE TABLE IF NOT EXISTS stack 
 (
-    player_id UUID,
+    user_id UUID,
     card_id VARCHAR(255),
-    PRIMARY KEY (player_id, card_id),
-    FOREIGN KEY (player_id) REFERENCES player_stats (player_id),
+    PRIMARY KEY (user_id, card_id),
+    FOREIGN KEY (user_id) REFERENCES user_stats (user_id),
     FOREIGN KEY (card_id) REFERENCES card (id)
 );
 
 CREATE TABLE IF NOT EXISTS deck 
 (
-    player_id UUID,
+    user_id UUID,
     card_id VARCHAR(255),
-    PRIMARY KEY (player_id, card_id),
-    FOREIGN KEY (player_id, card_id) REFERENCES stack (player_id, card_id)
+    PRIMARY KEY (user_id, card_id),
+    FOREIGN KEY (user_id, card_id) REFERENCES stack (user_id, card_id)
 );

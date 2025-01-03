@@ -99,11 +99,6 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
                         Console.WriteLine($"{type} is not supported.");
                         break;
                 }
-
-                if (_request.GetBody() == null)
-                {
-                    Console.WriteLine("Empty Body.");
-                }
             }
             catch (JsonException e)
             {

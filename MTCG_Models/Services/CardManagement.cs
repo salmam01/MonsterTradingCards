@@ -65,234 +65,181 @@ namespace MonsterTradingCardsGame.MTCG_Models.Services
 
         public bool AddCardsToStack(Guid userId, List<string> cardIds, NpgsqlConnection connection, NpgsqlTransaction transaction)
         {
-            try
+            for(int i = 0; i < cardIds.Count; i++)
             {
-                for(int i = 0; i < cardIds.Count; i++)
+                using NpgsqlCommand command = new("INSERT INTO stack (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
+                command.Parameters.AddWithValue("userId", userId);
+                command.Parameters.AddWithValue("cardId", cardIds[i]);
+                int rowsAffected = command.ExecuteNonQuery();
+                if(rowsAffected <= 0)
                 {
-                    using NpgsqlCommand command = new("INSERT INTO stack (player_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
-                    command.Parameters.AddWithValue("userId", userId);
-                    command.Parameters.AddWithValue("cardId", cardIds[i]);
-                    command.ExecuteNonQuery();
+                    return false;
                 }
-                return true;
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while adding cards to stack: {e.Message}");
-                return false;
-            }
+            return true;
         }
 
         public bool AddCardsToDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
-            try
+            for (int i = 0; i < cardIds.Count; i++)
             {
-                for (int i = 0; i < cardIds.Count; i++)
+                using NpgsqlCommand command = new("INSERT INTO deck (user_id, card_id) VALUES (@userId, @cardId)", connection);
+                command.Parameters.AddWithValue("userId", userId);
+                command.Parameters.AddWithValue("cardId", cardIds[i]);
+                int rowsAffected = command.ExecuteNonQuery();
+                if (rowsAffected <= 0)
                 {
-                    using NpgsqlCommand command = new("INSERT INTO deck (player_id, card_id) VALUES (@userId, @cardId)", connection);
-                    command.Parameters.AddWithValue("userId", userId);
-                    command.Parameters.AddWithValue("cardId", cardIds[i]);
-                    command.ExecuteNonQuery();
+                    return false;
                 }
-                return true;
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while adding cards to deck: {e.Message}");
-                return false;
-            }
+            return true;
         }
             
         public bool CheckIfCardsInStack(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
-            try
+            for (int i = 0; i < cardIds.Count; i++)
             {
-                for (int i = 0; i < cardIds.Count; i++)
+                using NpgsqlCommand command = new("SELECT 1 FROM stack WHERE user_id = @userId AND card_id = @cardId LIMIT 1", connection);
+                command.Parameters.AddWithValue("userId", userId);
+                command.Parameters.AddWithValue("cardId", cardIds[i]);
+
+                var result = command.ExecuteScalar();
+
+                if (result == null)
                 {
-                    using NpgsqlCommand command = new("SELECT 1 FROM stack WHERE player_id = @userId AND card_id = @cardId LIMIT 1", connection);
-                    command.Parameters.AddWithValue("userId", userId);
-                    command.Parameters.AddWithValue("cardId", cardIds[i]);
-
-                    var result = command.ExecuteScalar();
-
-                    if (result == null)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
-                return true;
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while adding cards to deck: {e.Message}");
-                return false;
-            }
+            return true;
         }
 
         public bool CheckIfCardIsAlreadyInDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
-            try
+            for (int i = 0; i < cardIds.Count; i++)
             {
-                for (int i = 0; i < cardIds.Count; i++)
+                using NpgsqlCommand command = new("SELECT 1 FROM deck WHERE user_id = @userId AND card_id = @cardId LIMIT 1", connection);
+                command.Parameters.AddWithValue("userId", userId);
+                command.Parameters.AddWithValue("cardId", cardIds[i]);
+
+                var result = command.ExecuteScalar();
+
+                if (result != null)
                 {
-                    using NpgsqlCommand command = new("SELECT 1 FROM deck WHERE player_id = @userId AND card_id = @cardId LIMIT 1", connection);
-                    command.Parameters.AddWithValue("userId", userId);
-                    command.Parameters.AddWithValue("cardId", cardIds[i]);
-
-                    var result = command.ExecuteScalar();
-
-                    if (result != null)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
-                return false;
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while adding cards to deck: {e.Message}");
-                return false;
-            }
+            return false;
         }
 
         public List<Card> GetStack(NpgsqlConnection connection, Guid userId)
         {
             List<Card> stack = new();
-            try
-            {
-                using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM stack s INNER JOIN card c ON s.card_id = c.id WHERE s.player_id = @userId", connection);
-                command.Parameters.AddWithValue("userId", userId);
-                using var reader = command.ExecuteReader();
+            using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM stack s INNER JOIN card c ON s.card_id = c.id WHERE s.user_id = @userId", connection);
+            command.Parameters.AddWithValue("userId", userId);
+            using var reader = command.ExecuteReader();
                 
-                while (reader.Read())
-                {
-                    string id = reader["id"].ToString();
-                    string name = reader["name"].ToString();
-                    double damage = Convert.ToDouble(reader["damage"]);
+            while (reader.Read())
+            {
+                string id;
+                string name;
+                double damage;
 
-                    Card card = new(id, name, damage);
-                    stack.Add(card);
+                if (!reader.IsDBNull(reader.GetOrdinal("id")))
+                {
+                    id = reader.GetOrdinal("id").ToString();
                 }
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while retrieving player deck: {e.Message}");
+                else
+                {
+                    id = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                {
+                    name = reader.GetOrdinal("name").ToString();
+                }
+                else
+                {
+                    name = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("damage")))
+                {
+                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
+                }
+                else
+                {
+                    damage = 0;
+                }
+
+                Card card = new(id, name, damage);
+                stack.Add(card);
             }
             return stack;
-        }
-
-        public int GetStackSize(NpgsqlConnection connection, Guid userId)
-        {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT COUNT(*) FROM stack WHERE player_id = @userId", connection);
-                command.Parameters.AddWithValue("userId", userId);
-                return Convert.ToInt32(command.ExecuteScalar());
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return -1;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while retrieving player deck size: {e.Message}");
-                return -1;
-            }
         }
 
         public List<Card> GetDeck(NpgsqlConnection connection, Guid userId)
         {
             List<Card> deck = new();
-            try
-            {
-                using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM deck d INNER JOIN card c ON d.card_id = c.id WHERE d.player_id = @userId", connection);
-                command.Parameters.AddWithValue("userId", userId);
-                using var reader = command.ExecuteReader();
 
-                while (reader.Read())
+            using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM deck d INNER JOIN card c ON d.card_id = c.id WHERE d.user_id = @userId", connection);
+            command.Parameters.AddWithValue("userId", userId);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                string id;
+                string name;
+                double damage;
+
+                if (!reader.IsDBNull(reader.GetOrdinal("id")))
                 {
-                    string id = reader["id"].ToString();
-                    string name = reader["name"].ToString();
-                    double damage = Convert.ToDouble(reader["damage"]);
-
-                    Card card = new(id, name, damage);
-                    deck.Add(card);
+                    id = reader.GetOrdinal("id").ToString();
                 }
+                else
+                {
+                    id = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                {
+                    name = reader.GetOrdinal("name").ToString();
+                }
+                else
+                {
+                    name = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("damage")))
+                {
+                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
+                }
+                else
+                {
+                    damage = 0;
+                }
+
+                Card card = new(id, name, damage);
+                deck.Add(card);
             }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while retrieving player deck: {e.Message}");
-            }
+
             return deck;
+        }
+
+        public int GetStackSize(NpgsqlConnection connection, Guid userId)
+        {
+            using NpgsqlCommand command = new("SELECT COUNT(*) FROM stack WHERE user_id = @userId", connection);
+            command.Parameters.AddWithValue("userId", userId);
+            return Convert.ToInt32(command.ExecuteScalar());
         }
 
         public int GetDeckSize(NpgsqlConnection connection, Guid userId)
         {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT COUNT(*) FROM deck WHERE player_id = @userId", connection);
-                command.Parameters.AddWithValue("userId", userId);
-                return Convert.ToInt32(command.ExecuteScalar());
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return -1;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured while retrieving player deck size: {e.Message}");
-                return -1;
-            }
+            using NpgsqlCommand command = new("SELECT COUNT(*) FROM deck WHERE user_id = @userId", connection);
+            command.Parameters.AddWithValue("userId", userId);
+            return Convert.ToInt32(command.ExecuteScalar());
         }
 
         public bool CheckIfCardExists(NpgsqlConnection connection, string cardId)
         {
-            try
-            {
-                using NpgsqlCommand command = new("SELECT COUNT(*) FROM card WHERE id = @cardId", connection);
-                command.Parameters.AddWithValue("cardId", cardId);
-                return Convert.ToInt32(command.ExecuteScalar()) > 0;
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error occured during login: {e.Message}");
-                return false;
-            }
+            using NpgsqlCommand command = new("SELECT COUNT(*) FROM card WHERE id = @cardId", connection);
+            command.Parameters.AddWithValue("cardId", cardId);
+            return Convert.ToInt32(command.ExecuteScalar()) > 0;
         }
 
         public int GetMaxDeckSize()

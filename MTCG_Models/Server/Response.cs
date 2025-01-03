@@ -29,11 +29,17 @@ namespace MonsterTradingCardsGame.MTCG_Models.Server
         };
 
         public Response(int statusCode, object bodyObject)
-        {
+        {            
             _statusCode = statusCode;
-            _status = HTTPResponse.GetHeader(_statusCode);
+            _status = getStatusMessage();
             _contentType = $"Content-Type: application/json\r\n";
             _bodyObject = bodyObject;
+        }
+
+        public string getStatusMessage()
+        {
+            StatusMessage statusMessage = new();
+            return statusMessage.GetHeader(_statusCode);
         }
 
         public void SetToken(string token)
