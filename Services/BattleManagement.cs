@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace MonsterTradingCardsGame.Services
             _users = readyUsers;
         }
 
-        public Response ProcessBattle()
+        public List<User> ProcessBattle()
         {
             try
             {
@@ -37,27 +38,30 @@ namespace MonsterTradingCardsGame.Services
                 {
                     case 0:
                         _battleLog += "Draw.";
-                        break;
+                        return new List<User>();
 
                     case 1:
-                        _battleLog += $"{_users[0].Username}" +" won!";
+                        _battleLog += $"{_users[0].Username}" +" won!\n";
+                        //  update user stats
                         break;
 
                     case 2:
-                        _battleLog += $"{_users[1].Username}" + " won!";
+                        _battleLog += $"{_users[1].Username}" + " won!\n";
+                        //  update user stats
                         break;
 
                     default:
-                        Console.WriteLine($"An error occurred during battle.");
-                        return new Response(500, "An internal server error occurred.");
+                        _battleLog += $"An error occurred during battle.";
+                        return new List<User>();
                 }
 
-                return new Response(200, _battleLog);
+                Console.Write(_battleLog);
+                return _users;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"An error occurred during battle: {e.Message}");
-                return new Response(500, "An internal server error occurred.");
+                return new List<User>();
             }
         }
 
@@ -80,10 +84,10 @@ namespace MonsterTradingCardsGame.Services
 
                 //  Get random cards for the round
                 Card card1 = _users[0].UserDeck.GetRandomCard();
-                _battleLog += $"{_users[0].Username} is using {card1.Name}\n";
+                _battleLog += $"{_users[0].Username} is using {card1.Name}.\n";
 
                 Card card2 = _users[1].UserDeck.GetRandomCard();
-                _battleLog += $"{_users[1].Username} is using {card2.Name}\n";
+                _battleLog += $"{_users[1].Username} is using {card2.Name}.\n";
 
                 //  Battle begins
                 roundResult = BattleLogic(card1, card2);
@@ -91,15 +95,19 @@ namespace MonsterTradingCardsGame.Services
                 switch (roundResult)
                 {
                     case 0:
-                        _battleLog += "Draw!\n";
+                        _battleLog += "Draw! No one won this round.\n";
                         continue;
 
                     case 1:
                         _battleLog += $"{_users[0].Username} won this round!\n";
+                        _users[0].UserDeck.AddCardToDeck(card2);
+                        _users[1].UserDeck.RemoveCardFromDeck(card2);
                         break;
 
                     case 2:
                         _battleLog += $"{_users[1].Username} won this round!\n";
+                        _users[1].UserDeck.AddCardToDeck(card1);
+                        _users[0].UserDeck.RemoveCardFromDeck(card2);
                         break;
 
                     //  Error
@@ -117,23 +125,22 @@ namespace MonsterTradingCardsGame.Services
         {
             char type1 = card1.GetType();
             char type2 = card2.GetType();
-            int result = 0;
 
             //  Pure monster fight
             if (type1 == 'M' && type2 == 'M')
             {
-                _battleLog += "Both cards are of type Monster! Pure monster fight commencing!";
+                _battleLog += "Both cards are of type Monster! Pure monster fight commencing!\n";
                 return PureMonsterFight(card1, card2);
             }
 
             //  Monstercard vs. Spellcard
             if (type1 == 'M' && type2 == 'S' || type1 == 'S' && type2 == 'M')
             {
-                _battleLog += $"Fight!";
+                _battleLog += $"Fight!\n";
                 return MonsterSpellFight(card1, card2);
             }
 
-            return result;
+            return -1;
         }
 
         public int PureMonsterFight(Card card1, Card card2)
@@ -148,19 +155,23 @@ namespace MonsterTradingCardsGame.Services
                 if (speciality1 == 'G' && speciality2 == 'D')
                 {
                     damage1 = 0;
+                    _battleLog = $"{card1.Name} was too afraid of {card2.Name} to attack!\n";
                 }
                 if (speciality2 == 'G' && speciality1 == 'D')
                 {
                     damage2 = 0;
+                    _battleLog = $"{card2.Name} was too afraid of {card1.Name} to attack!\n";
                 }
 
                 if (speciality1 == 'W' && speciality2 == 'O')
                 {
                     damage2 = 0;
+                    _battleLog = $"{card1.Name} controlled {card2.Name} to not attack!\n";
                 }
                 if (speciality2 == 'W' && speciality1 == 'O')
                 {
                     damage1 = 0;
+                    _battleLog = $"{card2.Name} controlled {card1.Name} to not attack!\n";
                 }
 
                 return Fight(damage1, damage2);
@@ -194,6 +205,9 @@ namespace MonsterTradingCardsGame.Services
 
                     if(element2 == 'F')
                     {
+                        _battleLog = $"{card1.Name} is of type *Water*.\n";
+                        _battleLog = $"{card2.Name} is of type *Fire*.\n";
+                        _battleLog = $"{card1.Name} does double damage!";
                         damage1 *= value;
                     }
                     else
@@ -249,6 +263,8 @@ namespace MonsterTradingCardsGame.Services
                 return 0;
             }
         }
+
+        //public bool Remove()
 
     }
 }

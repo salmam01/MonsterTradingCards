@@ -8,47 +8,19 @@ namespace MonsterTradingCardsGame.Models
     public class User
     {
         public string Username { get; set; }
-        [JsonInclude][JsonPropertyName("Password")] private string _password;
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Guid UserID { get; set; }
+        [JsonIgnore] public Guid UserID { get; set; }
         public string Bio { get; set; }
         public string Image { get; set; }
         public string Name { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Deck UserDeck { get; set; }
 
-        public struct UserStats
-        {
-            public int Elo { get; set; }
-            public int Coins { get; set; }
-            public int GamesPlayed { get; set; }
-            public int Wins { get; set; }
-            public int Losses { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserStats Stats { get; set; }
 
-            public UserStats(int elo, int coins, int gamesPlayed, int wins, int losses)
-            {
-                Elo = elo;
-                Coins = coins;
-                GamesPlayed = gamesPlayed;
-                Wins = wins;
-                Losses = losses;
-            }
-        }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserStats Stats { get; set; } = new();
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Deck UserDeck { get; set; }      
         
-        
-        public User() { }
-
-        public User(string username, string password)
+        public User(string username)
         {
             Username = username;
-            _password = password;
         }
-
-        public void SetUserStats(int elo, int coins, int gamesPlayed, int wins, int losses)
-        {
-            Stats = new UserStats(elo, coins, gamesPlayed, wins, losses);
-        }
-
-        [JsonIgnore] public string GetPassword { get { return _password; } }
-
+        
     }
 }

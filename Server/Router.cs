@@ -1,4 +1,5 @@
 ﻿using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Models;
 using MonsterTradingCardsGame.Services;
 using MonsterTradingCardsGame.Services.Authentication;
 using Npgsql;
@@ -6,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -18,6 +20,7 @@ namespace MonsterTradingCardsGame.Server
         private readonly Parser _parser;
         private readonly UserManagement _userManagement;
         private readonly PackageManagement _packageManagement;
+        private readonly BattleManagement _battleManagement;
         private DatabaseConnection _dbConnection;
 
         public Router(string requestStr, int shopId)
@@ -26,6 +29,26 @@ namespace MonsterTradingCardsGame.Server
             _parser = new(requestStr);
             _userManagement = new(_dbConnection, shopId);
             _packageManagement = new(_dbConnection, shopId);
+        }
+
+        public Router(List<User> users)
+        {
+            _dbConnection = new();
+            _battleManagement = new(users);
+            _userManagement = new(_dbConnection);
+        }
+
+        public void BattleHandler()
+        {
+            List<User> usersToUpdate = _battleManagement.ProcessBattle();
+            if(usersToUpdate == null || usersToUpdate.Count == 0)
+            {
+                Console.WriteLine("An error occurred during battle.");
+                return;
+            }
+
+            Console.WriteLine("Updating users after battle...");
+            _userManagement.UpdateUsers(usersToUpdate);
         }
 
         //  Method that redirects users depending on the HTTP method

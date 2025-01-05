@@ -26,7 +26,7 @@ namespace MonsterTradingCardsGame.Models
             DeckCards.Add(card);
         }
 
-        public void DeleteCardFromDeck(Card card)
+        public void RemoveCardFromDeck(Card card)
         {
             DeckCards.Remove(card);
         }

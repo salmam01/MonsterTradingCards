@@ -131,10 +131,8 @@ namespace MonsterTradingCardsGame.Server
 
                 if (response.GetBattleRequest() != null)
                 {
+                    Console.WriteLine("User added to queue.");
                     _battleQueue.AddUserToQueue(response.GetBattleRequest());
-                    
-                    //  make client wait for new response, dont close connection until battle is over
-                    
                 }
 
                 writer.Flush();
@@ -153,30 +151,25 @@ namespace MonsterTradingCardsGame.Server
             }
             finally
             {
-                Console.WriteLine("Connection closed.");
                 client.Close();
+                Console.WriteLine("Connection closed.");
             }
         }
 
-        public void BattleHandler()
+        public async void BattleHandler()
         {
             while(_isRunning)
             {
-                List<User> readyUsers = null;
+                List<User> readyUsers = _battleQueue.GetNextBattle();
 
-                if(_battleQueue.GetUsersInQueue().Count == 2)
-                {
-                    readyUsers = _battleQueue.GetUsersInQueue();
-                }
-
-                if(readyUsers != null)
+                if (readyUsers != null && readyUsers.Count >= 2)
                 {
                     Console.WriteLine("Battle is starting ...");
-                    BattleManagement bm = new BattleManagement(readyUsers);
-                    Response response = bm.ProcessBattle();
+
+                    Router router = new(readyUsers);
+                    router.BattleHandler();
                 }
             }
-            
         }
 
         public bool CheckIfShopExists(NpgsqlConnection connection, int id)

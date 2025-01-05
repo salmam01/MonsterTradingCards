@@ -110,12 +110,12 @@ namespace MonsterTradingCardsGame.Services
             return false;
         }
 
-        public List<Card> GetStack(NpgsqlConnection connection, Guid userId)
+        public Stack GetStack(NpgsqlConnection connection, Guid userId)
         {
-            List<Card> stack = new();
             using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM stack s INNER JOIN card c ON s.card_id = c.id WHERE s.user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
             using var reader = command.ExecuteReader();
+            List<Card> cards = new();
 
             while (reader.Read())
             {
@@ -125,7 +125,7 @@ namespace MonsterTradingCardsGame.Services
 
                 if (!reader.IsDBNull(reader.GetOrdinal("id")))
                 {
-                    id = reader.GetOrdinal("id").ToString();
+                    id = reader.GetString(reader.GetOrdinal("id"));
                 }
                 else
                 {
@@ -133,7 +133,7 @@ namespace MonsterTradingCardsGame.Services
                 }
                 if (!reader.IsDBNull(reader.GetOrdinal("name")))
                 {
-                    name = reader.GetOrdinal("name").ToString();
+                    name = reader.GetString(reader.GetOrdinal("name"));
                 }
                 else
                 {
@@ -141,7 +141,7 @@ namespace MonsterTradingCardsGame.Services
                 }
                 if (!reader.IsDBNull(reader.GetOrdinal("damage")))
                 {
-                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
+                    damage = reader.GetDouble(reader.GetOrdinal("damage"));
                 }
                 else
                 {
@@ -149,18 +149,18 @@ namespace MonsterTradingCardsGame.Services
                 }
 
                 Card card = new(id, name, damage);
-                stack.Add(card);
+                cards.Add(card);
             }
-            return stack;
+
+            return new Stack(cards);
         }
 
-        public List<Card> GetDeck(NpgsqlConnection connection, Guid userId)
+        public Deck GetDeck(NpgsqlConnection connection, Guid userId)
         {
-            List<Card> deck = new();
-
             using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM deck d INNER JOIN card c ON d.card_id = c.id WHERE d.user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
             using var reader = command.ExecuteReader();
+            List<Card> cards = new();
 
             while (reader.Read())
             {
@@ -170,7 +170,7 @@ namespace MonsterTradingCardsGame.Services
 
                 if (!reader.IsDBNull(reader.GetOrdinal("id")))
                 {
-                    id = reader.GetOrdinal("id").ToString();
+                    id = reader.GetString(reader.GetOrdinal("id"));
                 }
                 else
                 {
@@ -178,7 +178,7 @@ namespace MonsterTradingCardsGame.Services
                 }
                 if (!reader.IsDBNull(reader.GetOrdinal("name")))
                 {
-                    name = reader.GetOrdinal("name").ToString();
+                    name = reader.GetString(reader.GetOrdinal("name"));
                 }
                 else
                 {
@@ -186,7 +186,7 @@ namespace MonsterTradingCardsGame.Services
                 }
                 if (!reader.IsDBNull(reader.GetOrdinal("damage")))
                 {
-                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
+                    damage = reader.GetDouble(reader.GetOrdinal("damage"));
                 }
                 else
                 {
@@ -194,71 +194,16 @@ namespace MonsterTradingCardsGame.Services
                 }
 
                 Card card = new(id, name, damage);
-                deck.Add(card);
+                cards.Add(card);
             }
+            Deck deck = new(cards);
 
-            return deck;
-        }
-
-        //  not needed anymore
-        public Card? GetRandomCard(NpgsqlConnection connection, Guid userId)
-        {
-            using NpgsqlCommand command = new("SELECT c.* FROM card c JOIN deck d ON c.id = d.card_id WHERE d.user_id = @userId ORDER BY RANDOM() LIMIT 1", connection);
-            command.Parameters.AddWithValue("userId", userId);
-
-            Card? card = null;
-
-            using var reader = command.ExecuteReader();
-            if (reader.Read())
+            foreach(Card card in deck.DeckCards)
             {
-                string id;
-                string name;
-                double damage;
-
-                if (!reader.IsDBNull(reader.GetOrdinal("id")))
-                {
-                    id = reader.GetOrdinal("id").ToString();
-                }
-                else
-                {
-                    id = "";
-                }
-                if (!reader.IsDBNull(reader.GetOrdinal("name")))
-                {
-                    name = reader.GetOrdinal("name").ToString();
-                }
-                else
-                {
-                    name = "";
-                }
-                if (!reader.IsDBNull(reader.GetOrdinal("damage")))
-                {
-                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
-                }
-                else
-                {
-                    damage = 0;
-                }
-
-                if(GetCardType(name) == 'M')
-                {
-                    MonsterCard monsterCard = new(id, name, damage);
-                    char element = GetCardElement(name);
-                    monsterCard.SetElement(element);
-                    monsterCard.Speciality = GetCardSpeciality(name, element);
-                    
-                    card = monsterCard;
-                }
-                else
-                {
-                    SpellCard spellCard = new(id, name, damage);
-                    spellCard.SetElement(GetCardElement(name));
-
-                    card = spellCard;
-                }
+                Console.WriteLine(card);
             }
 
-            return card;
+            return new Deck(cards);
         }
 
         public void UpdateDeck(NpgsqlConnection connection, Guid userId)

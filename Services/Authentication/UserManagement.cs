@@ -309,9 +309,8 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 if (reader.Read())
                 {
                     string queryUsername = reader.GetString(reader.GetOrdinal("username"));
-                    string queryPassword = reader.GetString(reader.GetOrdinal("password"));
 
-                    User user = new(queryUsername, queryPassword);
+                    User user = new(queryUsername);
 
                     if (!reader.IsDBNull(reader.GetOrdinal("name")))
                     {
@@ -376,6 +375,12 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
+                string? username = GetUsername(connection, token);
+                if (username == null)
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
                 using NpgsqlCommand command = new("SELECT * FROM user_stats WHERE user_id = @userId", connection);
                 command.Parameters.AddWithValue("userId", userId);
 
@@ -391,8 +396,9 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     int wins = reader.GetInt32(reader.GetOrdinal("wins"));
                     int losses = reader.GetInt32(reader.GetOrdinal("losses"));
 
-                    User user = new();
-                    user.SetUserStats(elo, coins, gamesPlayed, wins, losses);
+                    User user = new(username);
+                    UserStats stats = new(elo, coins, gamesPlayed, wins, losses);
+                    user.Stats = stats;
 
                     response = new(200, user.Stats);
                     return response;
@@ -592,13 +598,36 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 User user = (User)response.GetBodyObject();
                 user.UserID = userId.Value;
                 response = GetUserStats(token);
-                user.Stats = (User.UserStats)response.GetBodyObject();
-                user.UserDeck = new(_cardManagement.GetDeck(connection, userId.Value));
+                user.Stats = (UserStats)response.GetBodyObject();
+                user.UserDeck = _cardManagement.GetDeck(connection, userId.Value);
 
                 response = new(200, $"{username} added to battle queue. Awaiting opponent...");
                 response.SetBattleRequest(user);
 
                 return response;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occurred while configuring user deck: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
+            }
+        }
+
+        public Response UpdateUsers(List<User> users)
+        {
+            try
+            {
+                User user1 = users[0];
+                User user2 = users[1];
+
+
+
+                return new Response(500, "An internal server error occurred.");
             }
             catch (NpgsqlException e)
             {
@@ -630,13 +659,13 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                List<Card> stack = _cardManagement.GetStack(connection, userId.Value);
-                if (stack == null || stack.Count <= 0)
+                Stack stack = _cardManagement.GetStack(connection, userId.Value);
+                if (stack == null || stack.StackCards.Count <= 0)
                 {
-                    Console.WriteLine("Stack is empty");
+                    Console.WriteLine("Stack is empty.");
                 }
 
-                return new Response(200, stack);
+                return new Response(200, stack.StackCards);
             }
             catch (NpgsqlException e)
             {
@@ -667,13 +696,13 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                List<Card> deck = _cardManagement.GetDeck(connection, userId.Value);
-                if (deck == null || deck.Count <= 0)
+                Deck deck = _cardManagement.GetDeck(connection, userId.Value);
+                if (deck == null || deck.DeckCards.Count <= 0)
                 {
-                    Console.WriteLine("Deck is empty");
+                    Console.WriteLine("Deck is empty.");
                 }
 
-                return new Response(200, deck);
+                return new Response(200, deck.DeckCards);
             }
             catch (NpgsqlException e)
             {
