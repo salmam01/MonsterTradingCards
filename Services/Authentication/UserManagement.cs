@@ -25,6 +25,11 @@ namespace MonsterTradingCardsGame.Services.Authentication
         private readonly PackageManagement _packageManagement;
         private readonly CardManagement _cardManagement;
 
+        public UserManagement(DatabaseConnection dbConnection)
+        {
+            _dbConnection = dbConnection;
+        }
+
         public UserManagement(DatabaseConnection dbConnection, int shopId)
         {
             _dbConnection = dbConnection;
@@ -560,6 +565,53 @@ namespace MonsterTradingCardsGame.Services.Authentication
             return command.ExecuteNonQuery() > 0;
         }
 
+        public Response QueueForBattle(string token)
+        {
+            try
+            {
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if(connection == null || connection.State != ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                Guid? userId = GetUserId(connection, token);
+                if (userId == Guid.Empty || userId == null)
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                string? username = GetUsername(connection, token);
+                if (string.IsNullOrEmpty(username)) 
+                {
+                    return new Response(500, "Internal Server Error occured.");
+                }
+
+                Response response = GetUserData(token, username);
+                User user = (User)response.GetBodyObject();
+                user.UserID = userId.Value;
+                response = GetUserStats(token);
+                user.Stats = (User.UserStats)response.GetBodyObject();
+                user.UserDeck = new(_cardManagement.GetDeck(connection, userId.Value));
+
+                response = new(200, $"{username} added to battle queue. Awaiting opponent...");
+                response.SetBattleRequest(user);
+
+                return response;
+            }
+            catch (NpgsqlException e)
+            {
+                Console.WriteLine($"Failed to connect to Database: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occurred while configuring user deck: {e.Message}");
+                return new Response(500, "An internal server error occurred.");
+            }
+        }
+
         public Response GetUserStack(string token)
         {
             try
@@ -705,9 +757,8 @@ namespace MonsterTradingCardsGame.Services.Authentication
         {
             using NpgsqlCommand command = new("SELECT id FROM users WHERE token = @token", connection);
             command.Parameters.AddWithValue("token", token);
-            Guid? userId = (Guid?)command.ExecuteScalar();
 
-            return userId;
+            return (Guid?)command.ExecuteScalar();
         }
 
         public string? GetUsername(NpgsqlConnection connection, string token)

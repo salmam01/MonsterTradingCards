@@ -12,11 +12,12 @@ namespace MonsterTradingCardsGame.Services
         private readonly DatabaseConnection _dbConnection;
         private readonly CardManagement _cardManagement;
 
-
         public TradingManagement(DatabaseConnection dbConnection)
         {
             _dbConnection = dbConnection;
             _cardManagement = new();
         }
+
+
     }
 }

@@ -200,6 +200,72 @@ namespace MonsterTradingCardsGame.Services
             return deck;
         }
 
+        //  not needed anymore
+        public Card? GetRandomCard(NpgsqlConnection connection, Guid userId)
+        {
+            using NpgsqlCommand command = new("SELECT c.* FROM card c JOIN deck d ON c.id = d.card_id WHERE d.user_id = @userId ORDER BY RANDOM() LIMIT 1", connection);
+            command.Parameters.AddWithValue("userId", userId);
+
+            Card? card = null;
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                string id;
+                string name;
+                double damage;
+
+                if (!reader.IsDBNull(reader.GetOrdinal("id")))
+                {
+                    id = reader.GetOrdinal("id").ToString();
+                }
+                else
+                {
+                    id = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                {
+                    name = reader.GetOrdinal("name").ToString();
+                }
+                else
+                {
+                    name = "";
+                }
+                if (!reader.IsDBNull(reader.GetOrdinal("damage")))
+                {
+                    damage = Convert.ToDouble(reader.GetOrdinal("damage"));
+                }
+                else
+                {
+                    damage = 0;
+                }
+
+                if(GetCardType(name) == 'M')
+                {
+                    MonsterCard monsterCard = new(id, name, damage);
+                    char element = GetCardElement(name);
+                    monsterCard.SetElement(element);
+                    monsterCard.Speciality = GetCardSpeciality(name, element);
+                    
+                    card = monsterCard;
+                }
+                else
+                {
+                    SpellCard spellCard = new(id, name, damage);
+                    spellCard.SetElement(GetCardElement(name));
+
+                    card = spellCard;
+                }
+            }
+
+            return card;
+        }
+
+        public void UpdateDeck(NpgsqlConnection connection, Guid userId)
+        {
+
+        }
+
         public int GetStackSize(NpgsqlConnection connection, Guid userId)
         {
             using NpgsqlCommand command = new("SELECT COUNT(*) FROM stack WHERE user_id = @userId", connection);
@@ -212,6 +278,52 @@ namespace MonsterTradingCardsGame.Services
             using NpgsqlCommand command = new("SELECT COUNT(*) FROM deck WHERE user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
             return Convert.ToInt32(command.ExecuteScalar());
+        }
+
+        public char GetCardType(string cardName)
+        {
+            if (cardName.EndsWith("Spell"))
+            {
+                return 'S';
+            }
+            return 'M';
+        }
+
+        public char GetCardElement(string cardName)
+        {
+            if (cardName.StartsWith("Water"))
+            {
+                return 'W';
+            }
+            if (cardName.StartsWith("Fire"))
+            {
+                return 'F';
+            }
+
+            return 'N';
+        }
+
+        public char GetCardSpeciality(string cardName, char elementType)
+        {
+            Dictionary<string, char> specialities = new()
+            {
+                { "Goblin", 'G' },
+                { "Dragon", 'D' },
+                { "Wizzard", 'W' },
+                { "Ork", 'O' },
+                { "Knight", 'N' },
+                { "Kraken", 'K' },
+                { "Elf", 'E' }
+            };
+
+            foreach (string s in specialities.Keys)
+            {
+                if (cardName == s || cardName.EndsWith(s))
+                {
+                    return specialities[s];
+                }
+            }
+            return '0';
         }
 
         public bool CheckIfCardExists(NpgsqlConnection connection, string cardId)

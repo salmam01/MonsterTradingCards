@@ -16,10 +16,11 @@ namespace MonsterTradingCardsGame.Server
         private readonly int _statusCode;
         private readonly string _status;
         private readonly string _contentType;
-        private object _bodyObject;
+        private readonly object _bodyObject;
 
         private string _token;
         private string _body;
+        private User _battleRequest = null;
 
         //  Options for prettier formatting of JSON serialization
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
@@ -31,12 +32,12 @@ namespace MonsterTradingCardsGame.Server
         public Response(int statusCode, object bodyObject)
         {
             _statusCode = statusCode;
-            _status = getStatusMessage();
+            _status = GetStatusMessage();
             _contentType = $"Content-Type: application/json\r\n";
             _bodyObject = bodyObject;
         }
 
-        public string getStatusMessage()
+        public string GetStatusMessage()
         {
             StatusMessage statusMessage = new();
             return statusMessage.GetHeader(_statusCode);
@@ -108,13 +109,6 @@ namespace MonsterTradingCardsGame.Server
                 }, _jsonOptions);
             }
         }
-
-        public string GetResponse()
-        {
-            SetBody();
-            return $"{_status}\r\n{_contentType}\r\n{_body}";
-        }
-
         public bool CheckIfUserError()
         {
             return _statusCode >= 400 && _statusCode < 500;
@@ -123,6 +117,27 @@ namespace MonsterTradingCardsGame.Server
         public bool CheckIfServerError()
         {
             return _statusCode >= 500;
+        }
+
+        public void SetBattleRequest(User user)
+        {
+            _battleRequest = user;
+        }
+
+        public User GetBattleRequest()
+        {
+            return _battleRequest;
+        }
+
+        public string GetResponse()
+        {
+            SetBody();
+            return $"{_status}\r\n{_contentType}\r\n{_body}";
+        }
+
+        public object GetBodyObject()
+        {
+            return _bodyObject;
         }
     }
 }

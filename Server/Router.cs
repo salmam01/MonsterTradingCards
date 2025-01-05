@@ -154,72 +154,91 @@ namespace MonsterTradingCardsGame.Server
         //  Method that handles POST Requests
         public void PostRequestHandler(string path)
         {
-            //  Can be split into further methods to handle authenticated vs unauthenticated routes
             Console.WriteLine($"Handling POST Request for {path}...");
 
-            if (path == "/users")
+            if(path == "/users" || path == "/sessions")
             {
-                _request = _parser.ParseBody("dictionary");
-                _response = _userManagement.SignUp(_request.GetBody());
-                return;
-            }
-            if (path == "/sessions")
-            {
-                _request = _parser.ParseBody("dictionary");
-                _response = _userManagement.Login(_request.GetBody());
-                return;
-            }
-
-            string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
-            if (token == null)
-            {
-                Console.WriteLine("Unauthorized: invalid user token.");
-                _response = new(401, "Unauthorized.");
-                return;
-            }
-
-            using NpgsqlConnection connection = _dbConnection.OpenConnection();
-
-            if (_userManagement.CheckIfTokenIsValid(token))
-            {
-                switch (path)
-                {
-                    case "/packages":
-                        _request = _parser.ParseBody("card");
-
-                        if (_userManagement.CheckIfAdmin(connection, token))
-                        {
-                            _response = _packageManagement.CreatePackage(_request.GetCards());
-                        }
-                        else
-                        {
-                            Console.WriteLine("Unauthorized: user is not admin.");
-                            _response = new(401, "Unauthorized.");
-                        }
-                        break;
-
-                    case "/transactions/packages":
-                        _response = _userManagement.AquirePackage(token);
-                        break;
-
-                    case "/tradings":
-                        Console.WriteLine("Invalid path.");
-                        _response = new(404, "Invalid path.");
-                        break;
-
-                    //  Path does not exist, send Error Response Code to Client
-                    default:
-                        Console.WriteLine("Invalid path.");
-                        _response = new(404, "Invalid path.");
-                        break;
-                }
+                UnauthorizedPostRequest(path);
             }
             else
             {
-                Console.WriteLine("Unauthorized: invalid user token.");
-                _response = new(401, "Unauthorized.");
+                string? token = _parser.ExtractToken(_request.GetHeaders()["Authorization"]);
+                if (token == null)
+                {
+                    Console.WriteLine("Unauthorized: invalid user token.");
+                    _response = new(401, "Unauthorized.");
+                }
+                else
+                {
+                    if (_userManagement.CheckIfTokenIsValid(token))
+                    {
+
+                        AuthorizedPostRequest(path, token);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unauthorized: invalid user token.");
+                        _response = new(401, "Unauthorized.");
+                    }
+                }
             }
         }
+
+        public void UnauthorizedPostRequest(string path)
+        {
+            switch(path)
+            {
+                case "/users":
+                    _request = _parser.ParseBody("dictionary");
+                    _response = _userManagement.SignUp(_request.GetBody());
+                    break;
+
+                case "/sessions":
+                    _request = _parser.ParseBody("dictionary");
+                    _response = _userManagement.Login(_request.GetBody());
+                    break;
+            }
+        }
+
+        public void AuthorizedPostRequest(string path, string token)
+        {
+            using NpgsqlConnection connection = _dbConnection.OpenConnection();
+            switch (path)
+            {
+                case "/packages":
+                    _request = _parser.ParseBody("card");
+
+                    if (_userManagement.CheckIfAdmin(connection, token))
+                    {
+                        _response = _packageManagement.CreatePackage(_request.GetCards());
+                    }
+                    else
+                    {
+                        Console.WriteLine("Unauthorized: user is not admin.");
+                        _response = new(401, "Unauthorized.");
+                    }
+                    break;
+
+                case "/transactions/packages":
+                    _response = _userManagement.AquirePackage(token);
+                    break;
+
+                case "/tradings":
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
+                    break;
+
+                case "/battles":
+                    _response = _userManagement.QueueForBattle(token);
+                    break;
+
+                default:
+                    Console.WriteLine("Invalid path.");
+                    _response = new(404, "Invalid path.");
+                    break;
+            }
+        }
+
 
         public void PutRequestHandler(string path)
         {

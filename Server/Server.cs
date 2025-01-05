@@ -14,14 +14,17 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Reflection.Metadata;
 using System.Transactions;
 using MonsterTradingCardsGame.Database;
+using MonsterTradingCardsGame.Models;
+using MonsterTradingCardsGame.Services;
 
 namespace MonsterTradingCardsGame.Server
 {
     public class Server
     {
         private readonly TcpListener _listener;
-        private bool _isRunning = true;
         private DatabaseConnection _dbConnection;
+        private BattleQueue _battleQueue;
+        private bool _isRunning = true;
         private const int _shopId = 1;
 
         public Server(string url)
@@ -30,6 +33,7 @@ namespace MonsterTradingCardsGame.Server
             int port = uri.Port;
             _listener = new TcpListener(IPAddress.Any, port);
             _dbConnection = new();
+            _battleQueue = new BattleQueue();
         }
 
         //  This method is the starting point of the server
@@ -45,9 +49,10 @@ namespace MonsterTradingCardsGame.Server
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
                 if (connection == null)
                 {
-                    Console.WriteLine($"Connection failed. Status: {connection.State}");
+                    Console.WriteLine($"Connection failed.");
                     Console.WriteLine($"An internal server error occurred.");
                     StopServer();
+                    return;
                 }
 
                 if (!CheckIfShopExists(connection, _shopId))
@@ -59,6 +64,7 @@ namespace MonsterTradingCardsGame.Server
                 {
                     Console.WriteLine("Shop already exists.");
                 }
+                Task.Run(() => BattleHandler());
 
                 while (_isRunning)
                 {
@@ -112,15 +118,23 @@ namespace MonsterTradingCardsGame.Server
 
                 //  Each Thread has its own Database Connection and Router
                 Router router = new(requestStr, _shopId);
-                var response = router.RequestHandler();
+                Response response = router.RequestHandler();
 
                 await writer.WriteLineAsync(response.GetResponse());
                 Console.WriteLine($"\nResponse:\n {response.GetResponse()}");
 
                 if (response.CheckIfServerError())
                 {
-                    Console.WriteLine("Server error detected. Initiating shutdown...");
+                    Console.WriteLine("Server error detected.");
                     StopServer();
+                }
+
+                if (response.GetBattleRequest() != null)
+                {
+                    _battleQueue.AddUserToQueue(response.GetBattleRequest());
+                    
+                    //  make client wait for new response, dont close connection until battle is over
+                    
                 }
 
                 writer.Flush();
@@ -142,6 +156,27 @@ namespace MonsterTradingCardsGame.Server
                 Console.WriteLine("Connection closed.");
                 client.Close();
             }
+        }
+
+        public void BattleHandler()
+        {
+            while(_isRunning)
+            {
+                List<User> readyUsers = null;
+
+                if(_battleQueue.GetUsersInQueue().Count == 2)
+                {
+                    readyUsers = _battleQueue.GetUsersInQueue();
+                }
+
+                if(readyUsers != null)
+                {
+                    Console.WriteLine("Battle is starting ...");
+                    BattleManagement bm = new BattleManagement(readyUsers);
+                    Response response = bm.ProcessBattle();
+                }
+            }
+            
         }
 
         public bool CheckIfShopExists(NpgsqlConnection connection, int id)
@@ -168,7 +203,7 @@ namespace MonsterTradingCardsGame.Server
 
         public void StopServer()
         {
-            Console.WriteLine("Server is shutting down...");
+            Console.WriteLine("Server is initiating shutdown...");
             _isRunning = false;
             _listener.Stop();
         }

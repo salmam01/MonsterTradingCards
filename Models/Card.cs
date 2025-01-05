@@ -9,7 +9,7 @@ namespace MonsterTradingCardsGame.Models
         public string Id { get; set; }
         public string Name { get; set; }
         public double Damage { get; set; }
-        protected int _element;
+        protected char _element;
         protected char _type;
 
         public Card(string id, string name, double damage)
@@ -19,13 +19,13 @@ namespace MonsterTradingCardsGame.Models
             Damage = damage;
         }
 
+        public void SetElement(char element) 
+        {
+            _element = element;
+        }
+
         public char GetType() { return _type; }
-
-        public void SetElement() { }
-
-        public void SetType() { }
-
-        public void Attack(Card enemy) { }
-
+        
+        public char GetElement() { return _element; }
     }
 }

@@ -9,9 +9,11 @@ namespace MonsterTradingCardsGame.Models
     {
         public string Username { get; set; }
         [JsonInclude][JsonPropertyName("Password")] private string _password;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Guid UserID { get; set; }
         public string Bio { get; set; }
         public string Image { get; set; }
         public string Name { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Deck UserDeck { get; set; }
 
         public struct UserStats
         {
@@ -31,6 +33,8 @@ namespace MonsterTradingCardsGame.Models
             }
         }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserStats Stats { get; set; } = new();
+        
+        
         public User() { }
 
         public User(string username, string password)
