@@ -25,7 +25,14 @@ namespace MonsterTradingCardsGame.Models
 
         public void UpdateElo(int amount)
         {
-            Elo += amount;
+            if(Elo + amount <= 0)
+            {
+                Elo = 0;
+            }
+            else
+            {
+                Elo += amount;
+            }
         }
 
         public void UpdateCoins(int amount)
@@ -33,19 +40,16 @@ namespace MonsterTradingCardsGame.Models
             Coins += amount;
         }
 
-        public void UpdateGamesPlayed(int amount)
+        public void UpdateWins()
         {
-            GamesPlayed += amount;
+            GamesPlayed++;
+            Wins++;
         }
 
-        public void UpdateWins(int amount)
+        public void UpdateLosses()
         {
-            Wins += amount;
-        }
-
-        public void UpdateLosses(int amount)
-        {
-            Losses += amount;
+            GamesPlayed++;
+            Losses++;
         }
 
     }

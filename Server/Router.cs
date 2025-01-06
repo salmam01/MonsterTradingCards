@@ -43,7 +43,7 @@ namespace MonsterTradingCardsGame.Server
             List<User> usersToUpdate = _battleManagement.ProcessBattle();
             if(usersToUpdate == null || usersToUpdate.Count == 0)
             {
-                Console.WriteLine("An error occurred during battle.");
+                Console.WriteLine("Nothing new to update.");
                 return;
             }
 

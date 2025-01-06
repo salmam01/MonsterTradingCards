@@ -9,23 +9,77 @@ namespace MonsterTradingCardsGame.Models
         public string Id { get; set; }
         public string Name { get; set; }
         public double Damage { get; set; }
-        protected char _element;
-        protected char _type;
+        public char Element { get; set; }
+        public char Type { get; set; }
+        public char Speciality { get; set; }
 
         public Card(string id, string name, double damage)
         {
             Id = id;
             Name = name;
             Damage = damage;
+
+            SetCardType();
+            SetCardElement();
+            SetCardSpeciality();
         }
 
-        public void SetElement(char element) 
+        public void SetCardType()
         {
-            _element = element;
+            if (Name.EndsWith("Spell"))
+            {
+                Type = 'S';
+            }
+            else
+            {
+                Type = 'M';
+            }
         }
 
-        public char GetType() { return _type; }
-        
-        public char GetElement() { return _element; }
+        public void SetCardElement()
+        {
+            if (Name.StartsWith("Water"))
+            {
+                Element = 'W';
+            }
+            else if (Name.StartsWith("Fire"))
+            {
+                Element = 'F';
+            }
+            else
+            {
+                Element = 'N';
+            }   
+        }
+
+        public void SetCardSpeciality()
+        {
+            if (Type == 'M')
+            {
+                Dictionary<string, char> specialities = new()
+                {
+                    { "Goblin", 'G' },
+                    { "Dragon", 'D' },
+                    { "Wizzard", 'W' },
+                    { "Ork", 'O' },
+                    { "Knight", 'N' },
+                    { "Kraken", 'K' },
+                    { "Elf", 'E' }
+                };
+
+                foreach (string s in specialities.Keys)
+                {
+                    if (Name == s || Name.EndsWith(s))
+                    {
+                        Speciality = specialities[s];
+                    }
+                }
+            }
+            else
+            {
+                Speciality = '0';
+            }
+        }
+
     }
 }

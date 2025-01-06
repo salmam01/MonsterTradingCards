@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace MonsterTradingCardsGame.Models
 {
-    public class Stack
+    public class UserStack
     {
         public List<Card> StackCards;
 
-        public Stack(List<Card> stackCards) 
+        public UserStack(List<Card> stackCards) 
         {
             StackCards = stackCards;
         }

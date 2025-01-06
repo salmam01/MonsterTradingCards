@@ -1,30 +1,34 @@
 Curl Scripts for Testing:
 
-curl -X POST http://localhost:10001/users --header "Content-Type: application/json" \ -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"          #signup
-curl -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"Lara\", \"Password\":\"Croft\"}"         #login
-
 curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"      #signup
 curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Kennedy\"}"   #login
 
 curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"          #signup
 curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"Wong\"}"       #login
 
-curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Soma\", \"Password\":\"Cruz\"}"         #signup
-curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Soma\", \"Password\":\"Cruz\"}"      #login
+BATTLE SCRIPT
+curl -i -X POST http://localhost:10001/users --header "Content-Type: application/json" -d "{\"Username\":\"kienboec\", \"Password\":\"daniel\"}"
+curl -i -X POST http://localhost:10001/users --header "Content-Type: application/json" -d "{\"Username\":\"altenhof\", \"Password\":\"markus\"}"
+curl -i -X POST http://localhost:10001/users --header "Content-Type: application/json" -d "{\"Username\":\"admin\",    \"Password\":\"istrator\"}"
 
-Error Testing:
-    
-curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\"\"}" 
-curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
-curl -X POST http://localhost:10001/users \ --header "Content-Type: application/json" \ -d "{\"Username\":\"\", \"Password\":\"Wong\"}" 
-curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Ada\", \"Password\":\" \"}"
-curl -X POST http://localhost:10001/sessions \ --header "Content-Type: application/json" \ -d "{\"Username\":\"Leon\", \"Password\":\"Wong\"}" 
+curl -i -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"kienboec\", \"Password\":\"daniel\"}"
+curl -i -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"altenhof\", \"Password\":\"markus\"}"
+curl -i -X POST http://localhost:10001/sessions --header "Content-Type: application/json" -d "{\"Username\":\"admin\",    \"Password\":\"istrator\"}"
 
-REM --------------------------------------------------
-echo 3) create packages (done by "admin")
 curl -i -X POST http://localhost:10001/packages --header "Content-Type: application/json" --header "Authorization: Bearer admin-mtcgToken" -d "[{\"Id\":\"845f0dc7-37d0-426e-994e-43fc3ac83c08\", \"Name\":\"WaterGoblin\", \"Damage\": 10.0}, {\"Id\":\"99f8f8dc-e25e-4a95-aa2c-782823f36e2a\", \"Name\":\"Dragon\", \"Damage\": 50.0}, {\"Id\":\"e85e3976-7c86-4d06-9a80-641c2019a79f\", \"Name\":\"WaterSpell\", \"Damage\": 20.0}, {\"Id\":\"1cb6ab86-bdb2-47e5-b6e4-68c5ab389334\", \"Name\":\"Ork\", \"Damage\": 45.0}, {\"Id\":\"dfdd758f-649c-40f9-ba3a-8657f4b3439f\", \"Name\":\"FireSpell\",    \"Damage\": 25.0}]"
-echo "Should return HTTP 201"
-echo.
+curl -i -X POST http://localhost:10001/transactions/packages --header "Content-Type: application/json" --header "Authorization: Bearer kienboec-mtcgToken" -d ""
+
+curl -i -X POST http://localhost:10001/packages --header "Content-Type: application/json" --header "Authorization: Bearer admin-mtcgToken" -d "[{\"Id\":\"644808c2-f87a-4600-b313-122b02322fd5\", \"Name\":\"WaterGoblin\", \"Damage\":  9.0}, {\"Id\":\"4a2757d6-b1c3-47ac-b9a3-91deab093531\", \"Name\":\"Dragon\", \"Damage\": 55.0}, {\"Id\":\"91a6471b-1426-43f6-ad65-6fc473e16f9f\", \"Name\":\"WaterSpell\", \"Damage\": 21.0}, {\"Id\":\"4ec8b269-0dfa-4f97-809a-2c63fe2a0025\", \"Name\":\"Ork\", \"Damage\": 55.0}, {\"Id\":\"f8043c23-1534-4487-b66b-238e0c3c39b5\", \"Name\":\"WaterSpell\",   \"Damage\": 23.0}]"
+curl -i -X POST http://localhost:10001/transactions/packages --header "Content-Type: application/json" --header "Authorization: Bearer altenhof-mtcgToken" -d ""
+
+curl -i -X PUT http://localhost:10001/deck --header "Content-Type: application/json" --header "Authorization: Bearer kienboec-mtcgToken" -d "[\"845f0dc7-37d0-426e-994e-43fc3ac83c08\", \"99f8f8dc-e25e-4a95-aa2c-782823f36e2a\", \"e85e3976-7c86-4d06-9a80-641c2019a79f\", \"1cb6ab86-bdb2-47e5-b6e4-68c5ab389334\"]"
+curl -i -X PUT http://localhost:10001/deck --header "Content-Type: application/json" --header "Authorization: Bearer altenhof-mtcgToken" -d "[\"644808c2-f87a-4600-b313-122b02322fd5\", \"4a2757d6-b1c3-47ac-b9a3-91deab093531\", \"91a6471b-1426-43f6-ad65-6fc473e16f9f\", \"4ec8b269-0dfa-4f97-809a-2c63fe2a0025\"]"
+
+curl -i -X GET http://localhost:10001/deck --header "Authorization: Bearer kienboec-mtcgToken"
+curl -i -X GET http://localhost:10001/deck --header "Authorization: Bearer altenhof-mtcgToken"
+
+start /b "kienboec battle" curl -i -X POST http://localhost:10001/battles --header "Authorization: Bearer kienboec-mtcgToken"
+start /b "altenhof battle" curl -i -X POST http://localhost:10001/battles --header "Authorization: Bearer altenhof-mtcgToken"
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -34,6 +38,16 @@ docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtc
 Change Anything inside the Database:
 docker exec -it mtcg_container bash
 psql -U salma -d mtcg_database
+
+Delete Database:
+\c postgres
+DROP DATABASE mtcg_database;
+
+Create Database:
+CREATE DATABASE mtcg_database;
+exit
+psql -U salma -d mtcg_database
+\d
 
 Delete User:
 DELETE FROM player_stats WHERE player_id IN (SELECT id FROM player WHERE username = 'username_to_delete');
@@ -45,16 +59,6 @@ FROM pg_stat_activity
 WHERE datname = 'mtcg_database';
 
 SELECT pg_terminate_backend(<pid>);
-
-Delete Database:
-\c postgres
-DROP DATABASE mtcg_database;
-
-Create Database:
-CREATE DATABASE mtcg_database;
-exit
-psql -U salma -d mtcg_database
-\d
 
 Create the Docker Postgres Container:
 docker run --name mtcg_container -e POSTGRES_USER=salma -e POSTGRES_PASSWORD=mtcg1234 -e POSTGRES_DB=mtcg_database -p 5432:5432 -d postgres

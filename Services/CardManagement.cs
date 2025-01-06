@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
+using System.Collections;
 
 namespace MonsterTradingCardsGame.Services
 {
@@ -110,7 +111,7 @@ namespace MonsterTradingCardsGame.Services
             return false;
         }
 
-        public Stack GetStack(NpgsqlConnection connection, Guid userId)
+        public UserStack GetStack(NpgsqlConnection connection, Guid userId)
         {
             using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM stack s INNER JOIN card c ON s.card_id = c.id WHERE s.user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
@@ -152,7 +153,7 @@ namespace MonsterTradingCardsGame.Services
                 cards.Add(card);
             }
 
-            return new Stack(cards);
+            return new UserStack(cards);
         }
 
         public Deck GetDeck(NpgsqlConnection connection, Guid userId)
@@ -196,19 +197,20 @@ namespace MonsterTradingCardsGame.Services
                 Card card = new(id, name, damage);
                 cards.Add(card);
             }
-            Deck deck = new(cards);
-
-            foreach(Card card in deck.DeckCards)
-            {
-                Console.WriteLine(card);
-            }
 
             return new Deck(cards);
         }
 
-        public void UpdateDeck(NpgsqlConnection connection, Guid userId)
+        public bool UpdateStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserStack stack)
         {
+            return false;
+        }
 
+        public bool UpdateDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, Deck deck)
+        {
+            using NpgsqlCommand command = new("UPDATE user_stats SET elo = @newElo, coins = @newCoins, games_played = @newGamesPlayed, wins = @newWins, losses = @newLosses WHERE user_id = @userId", connection, transaction);
+
+            return command.ExecuteNonQuery() > 0;
         }
 
         public int GetStackSize(NpgsqlConnection connection, Guid userId)
@@ -223,52 +225,6 @@ namespace MonsterTradingCardsGame.Services
             using NpgsqlCommand command = new("SELECT COUNT(*) FROM deck WHERE user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
             return Convert.ToInt32(command.ExecuteScalar());
-        }
-
-        public char GetCardType(string cardName)
-        {
-            if (cardName.EndsWith("Spell"))
-            {
-                return 'S';
-            }
-            return 'M';
-        }
-
-        public char GetCardElement(string cardName)
-        {
-            if (cardName.StartsWith("Water"))
-            {
-                return 'W';
-            }
-            if (cardName.StartsWith("Fire"))
-            {
-                return 'F';
-            }
-
-            return 'N';
-        }
-
-        public char GetCardSpeciality(string cardName, char elementType)
-        {
-            Dictionary<string, char> specialities = new()
-            {
-                { "Goblin", 'G' },
-                { "Dragon", 'D' },
-                { "Wizzard", 'W' },
-                { "Ork", 'O' },
-                { "Knight", 'N' },
-                { "Kraken", 'K' },
-                { "Elf", 'E' }
-            };
-
-            foreach (string s in specialities.Keys)
-            {
-                if (cardName == s || cardName.EndsWith(s))
-                {
-                    return specialities[s];
-                }
-            }
-            return '0';
         }
 
         public bool CheckIfCardExists(NpgsqlConnection connection, string cardId)

@@ -28,6 +28,7 @@ namespace MonsterTradingCardsGame.Server
             {
                 if(_userQueue.Count >= 2)
                 {
+                    Console.WriteLine("Users in Queue: ", _userQueue.Count);
                     List<User> userList = new(2);
                     userList.Add(_userQueue.Dequeue());
                     userList.Add(_userQueue.Dequeue());

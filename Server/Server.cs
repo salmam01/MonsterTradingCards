@@ -64,7 +64,6 @@ namespace MonsterTradingCardsGame.Server
                 {
                     Console.WriteLine("Shop already exists.");
                 }
-                Task.Run(() => BattleHandler());
 
                 while (_isRunning)
                 {
@@ -72,6 +71,8 @@ namespace MonsterTradingCardsGame.Server
                     Console.WriteLine("\nNew client connected!");
 
                     _ = RequestHandler(client);
+
+                    BattleHandler();
                 }
             }
             catch (SocketException e)
@@ -131,8 +132,8 @@ namespace MonsterTradingCardsGame.Server
 
                 if (response.GetBattleRequest() != null)
                 {
-                    Console.WriteLine("User added to queue.");
                     _battleQueue.AddUserToQueue(response.GetBattleRequest());
+                    Console.WriteLine("User added to queue.");
                 }
 
                 writer.Flush();
@@ -156,19 +157,22 @@ namespace MonsterTradingCardsGame.Server
             }
         }
 
-        public async void BattleHandler()
+        public void BattleHandler()
         {
-            while(_isRunning)
+            List<User> readyUsers = _battleQueue.GetNextBattle();
+
+            if (readyUsers != null && readyUsers.Count >= 2)
             {
-                List<User> readyUsers = _battleQueue.GetNextBattle();
-
-                if (readyUsers != null && readyUsers.Count >= 2)
+                if (readyUsers[0].Username == readyUsers[1].Username)
                 {
-                    Console.WriteLine("Battle is starting ...");
-
-                    Router router = new(readyUsers);
-                    router.BattleHandler();
+                    Console.WriteLine("The same user cannot battle themselves. Battle aborted.");
+                    return;
                 }
+
+                Console.WriteLine("\nBattle is starting ...");
+
+                Router router = new(readyUsers);
+                router.BattleHandler();
             }
         }
 

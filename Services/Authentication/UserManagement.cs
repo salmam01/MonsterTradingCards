@@ -11,6 +11,7 @@ using System.Data.Common;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -28,6 +29,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
         public UserManagement(DatabaseConnection dbConnection)
         {
             _dbConnection = dbConnection;
+            _cardManagement = new();
         }
 
         public UserManagement(DatabaseConnection dbConnection, int shopId)
@@ -419,7 +421,6 @@ namespace MonsterTradingCardsGame.Services.Authentication
             }
         }
 
-        //  Missing Implementation
         public Response UpdateUserData(Dictionary<string, string> requestBody, string token, string username)
         {
             try
@@ -625,9 +626,40 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 User user1 = users[0];
                 User user2 = users[1];
 
+                Guid? userId1 = user1.UserID;
+                Guid? userId2 = user2.UserID;
 
+                using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                if (connection == null || connection.State != ConnectionState.Open)
+                {
+                    Console.WriteLine("Connection to Database failed.");
+                    return new Response(500, "Internal Server Error occured.");
+                }
 
-                return new Response(500, "An internal server error occurred.");
+                using (NpgsqlTransaction transaction = connection.BeginTransaction())
+                {
+                    if(!UpdateUserStats(connection, transaction, userId1.Value, user1.Stats) || !UpdateUserStats(connection, transaction, userId2.Value, user2.Stats))
+                    {
+                        transaction.Rollback();
+                        return new Response(500, "An internal server error occurred.");
+                    }
+
+                    //  after updating the user stats, update the stack (remove cards that arent in deck anymore)
+                    /*if(!_cardManagement.UpdateStack(connection, transaction, userId1, user1.UserDeck))
+                    {
+
+                    }
+
+                    //  then update the deck
+                    if (!_cardManagement.UpdateDeck(connection, transaction, userId1, user1.UserDeck))
+                    {
+                        transaction.Rollback();
+                        return new Response(500, "An internal server error occurred.");
+                    }*/
+                    transaction.Commit();
+                }
+
+                return new Response(200, "User stats updated successfully.");
             }
             catch (NpgsqlException e)
             {
@@ -639,6 +671,19 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 Console.WriteLine($"An error occurred while configuring user deck: {e.Message}");
                 return new Response(500, "An internal server error occurred.");
             }
+        }
+
+        public bool UpdateUserStats(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserStats stats)
+        {
+            using NpgsqlCommand command = new("UPDATE user_stats SET elo = @newElo, coins = @newCoins, games_played = @newGamesPlayed, wins = @newWins, losses = @newLosses WHERE user_id = @userId", connection, transaction);
+            command.Parameters.AddWithValue("newElo", stats.Elo);
+            command.Parameters.AddWithValue("newCoins", stats.Coins);
+            command.Parameters.AddWithValue("newGamesPlayed", stats.GamesPlayed);
+            command.Parameters.AddWithValue("newWins", stats.Wins);
+            command.Parameters.AddWithValue("newLosses", stats.Losses);
+            command.Parameters.AddWithValue("userId", userId);
+
+            return command.ExecuteNonQuery() > 0;
         }
 
         public Response GetUserStack(string token)
@@ -659,7 +704,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                Stack stack = _cardManagement.GetStack(connection, userId.Value);
+                UserStack stack = _cardManagement.GetStack(connection, userId.Value);
                 if (stack == null || stack.StackCards.Count <= 0)
                 {
                     Console.WriteLine("Stack is empty.");
