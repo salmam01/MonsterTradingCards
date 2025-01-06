@@ -517,7 +517,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 }
 
                 //  Check if the cards to add are already in the user deck
-                if (_cardManagement.CheckIfCardInDeck(connection, cardIds, userId.Value))
+                if (_cardManagement.CheckIfCardsInDeck(connection, cardIds, userId.Value))
                 {
                     return new Response(409, "Card is already in deck.");
                 }
@@ -623,40 +623,42 @@ namespace MonsterTradingCardsGame.Services.Authentication
         {
             try
             {
-                User user1 = users[0];
-                User user2 = users[1];
-
-                Guid? userId1 = user1.UserID;
-                Guid? userId2 = user2.UserID;
-
-                using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if (connection == null || connection.State != ConnectionState.Open)
+                foreach (var user in users)
                 {
-                    Console.WriteLine("Connection to Database failed.");
-                    return new Response(500, "Internal Server Error occured.");
-                }
-
-                using (NpgsqlTransaction transaction = connection.BeginTransaction())
-                {
-                    if(!UpdateUserStats(connection, transaction, userId1.Value, user1.Stats) || !UpdateUserStats(connection, transaction, userId2.Value, user2.Stats))
+                    using NpgsqlConnection connection = _dbConnection.OpenConnection();
+                    if (connection == null || connection.State != ConnectionState.Open)
                     {
-                        transaction.Rollback();
-                        return new Response(500, "An internal server error occurred.");
+                        Console.WriteLine("Connection to Database failed.");
+                        return new Response(500, "Internal Server Error occured.");
                     }
 
-                    //  after updating the user stats, update the stack (remove cards that arent in deck anymore)
-                    /*if(!_cardManagement.UpdateStack(connection, transaction, userId1, user1.UserDeck))
+                    Guid? userId = user.UserID;
+
+                    using (NpgsqlTransaction transaction = connection.BeginTransaction())
                     {
 
+                        if (!UpdateUserStats(connection, transaction, userId.Value, user.Stats))
+                        {
+                            transaction.Rollback();
+                            return new Response(500, "Error while updating user stats.");
+                        }
+
+                        Console.WriteLine("Working here");
+                        if(!_cardManagement.UpdateStack(connection, transaction, userId.Value, user.UserDeck))
+                        {
+                            transaction.Rollback();
+                            return new Response(500, "Error while updating stack.");
+                        }
+
+                        Console.WriteLine("Working here too");
+                        if (!_cardManagement.UpdateDeck(connection, transaction, userId.Value, user.UserDeck))
+                        {
+                            transaction.Rollback();
+                            return new Response(500, "Error while updating deck.");
+                        }
+                        Console.WriteLine("Issue here");
+                        transaction.Commit();
                     }
-
-                    //  then update the deck
-                    if (!_cardManagement.UpdateDeck(connection, transaction, userId1, user1.UserDeck))
-                    {
-                        transaction.Rollback();
-                        return new Response(500, "An internal server error occurred.");
-                    }*/
-                    transaction.Commit();
                 }
 
                 return new Response(200, "User stats updated successfully.");
@@ -741,7 +743,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                Deck deck = _cardManagement.GetDeck(connection, userId.Value);
+                UserDeck deck = _cardManagement.GetDeck(connection, userId.Value);
                 if (deck == null || deck.DeckCards.Count <= 0)
                 {
                     Console.WriteLine("Deck is empty.");

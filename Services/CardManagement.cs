@@ -93,7 +93,7 @@ namespace MonsterTradingCardsGame.Services
             return true;
         }
 
-        public bool CheckIfCardInDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
+        public bool CheckIfCardsInDeck(NpgsqlConnection connection, List<string> cardIds, Guid userId)
         {
             for (int i = 0; i < cardIds.Count; i++)
             {
@@ -156,7 +156,7 @@ namespace MonsterTradingCardsGame.Services
             return new UserStack(cards);
         }
 
-        public Deck GetDeck(NpgsqlConnection connection, Guid userId)
+        public UserDeck GetDeck(NpgsqlConnection connection, Guid userId)
         {
             using NpgsqlCommand command = new("SELECT c.id, c.name, c.damage FROM deck d INNER JOIN card c ON d.card_id = c.id WHERE d.user_id = @userId", connection);
             command.Parameters.AddWithValue("userId", userId);
@@ -197,19 +197,74 @@ namespace MonsterTradingCardsGame.Services
                 Card card = new(id, name, damage);
                 cards.Add(card);
             }
-
-            return new Deck(cards);
+            return new UserDeck(cards);
         }
 
-        public bool UpdateStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserStack stack)
+        public bool UpdateStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserDeck deck)
         {
-            return false;
+            if(deck.DeletedCards != null && deck.DeletedCards.Count != 0)
+            {
+                foreach(Card deletedCard in deck.DeletedCards)
+                {
+                    using NpgsqlCommand command = new("DELETE FROM stack WHERE user_id = @userId AND card_id = @cardId", connection, transaction);
+                    command.Parameters.AddWithValue("userId", userId);
+                    command.Parameters.AddWithValue("cardId", deletedCard.Id);
+
+                    if(command.ExecuteNonQuery() == 0)
+                    {
+                        Console.WriteLine("Bish");
+                        return false;
+                    }
+                }
+            }
+
+            Console.WriteLine("Here no come");
+            if (deck.AddedCards != null && deck.AddedCards.Count != 0)
+            {
+                foreach (Card addedCard in deck.AddedCards)
+                {
+                    using NpgsqlCommand command = new("INSERT INTO stack (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
+                    command.Parameters.AddWithValue("userId", userId);
+                    command.Parameters.AddWithValue("cardId", addedCard.Id);
+
+                    if (command.ExecuteNonQuery() == 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
-        public bool UpdateDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, Deck deck)
+        public bool UpdateDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserDeck deck)
         {
-            using NpgsqlCommand command = new("UPDATE user_stats SET elo = @newElo, coins = @newCoins, games_played = @newGamesPlayed, wins = @newWins, losses = @newLosses WHERE user_id = @userId", connection, transaction);
+            if(deck.AddedCards != null || deck.AddedCards.Count != 0)
+            {
+                foreach (Card card in deck.AddedCards)
+                {
+                    if (!CheckIfCardExists(connection, card.Id))
+                    {
+                        return false;
+                    }
 
+                    using NpgsqlCommand command = new("INSERT INTO deck (user_id, card_id) VALUES (@userId, @cardId)", connection, transaction);
+                    command.Parameters.AddWithValue("userId", userId);
+                    command.Parameters.AddWithValue("cardId", card.Id);
+
+                    if (command.ExecuteNonQuery() == 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        public bool DeleteDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId)
+        {
+            using NpgsqlCommand command = new("DELETE FROM deck WHERE user_id = @userId", connection, transaction);
+            command.Parameters.AddWithValue("userId", userId);
             return command.ExecuteNonQuery() > 0;
         }
 

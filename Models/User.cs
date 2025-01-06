@@ -15,7 +15,7 @@ namespace MonsterTradingCardsGame.Models
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserStats Stats { get; set; }
 
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public Deck UserDeck { get; set; }      
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public UserDeck UserDeck { get; set; }      
         
         public User(string username)
         {

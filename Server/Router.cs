@@ -38,17 +38,18 @@ namespace MonsterTradingCardsGame.Server
             _userManagement = new(_dbConnection);
         }
 
-        public void BattleHandler()
+        public Response BattleHandler()
         {
             List<User> usersToUpdate = _battleManagement.ProcessBattle();
             if(usersToUpdate == null || usersToUpdate.Count == 0)
             {
                 Console.WriteLine("Nothing new to update.");
-                return;
+                return new Response(200, "User stats unchanged.");
             }
 
             Console.WriteLine("Updating users after battle...");
-            _userManagement.UpdateUsers(usersToUpdate);
+            _response = _userManagement.UpdateUsers(usersToUpdate);
+            return _response;
         }
 
         //  Method that redirects users depending on the HTTP method

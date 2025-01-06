@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS stack
     card_id VARCHAR(255),
     PRIMARY KEY (user_id, card_id),
     FOREIGN KEY (user_id) REFERENCES user_stats (user_id),
-    FOREIGN KEY (card_id) REFERENCES card (id)
+    FOREIGN KEY (card_id) REFERENCES card (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS deck 
@@ -55,5 +55,5 @@ CREATE TABLE IF NOT EXISTS deck
     user_id UUID,
     card_id VARCHAR(255),
     PRIMARY KEY (user_id, card_id),
-    FOREIGN KEY (user_id, card_id) REFERENCES stack (user_id, card_id)
+    FOREIGN KEY (user_id, card_id) REFERENCES stack (user_id, card_id) ON DELETE CASCADE
 );

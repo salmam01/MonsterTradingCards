@@ -172,7 +172,8 @@ namespace MonsterTradingCardsGame.Server
                 Console.WriteLine("\nBattle is starting ...");
 
                 Router router = new(readyUsers);
-                router.BattleHandler();
+                Response response = router.BattleHandler();
+                Console.WriteLine(response.GetResponse());
             }
         }
 
