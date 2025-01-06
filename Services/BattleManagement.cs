@@ -76,6 +76,7 @@ namespace MonsterTradingCardsGame.Services
                 }
 
                 Console.Write(_battleLog);
+                Console.WriteLine();
                 foreach (User user in _users)
                 {
                     Console.WriteLine(user.Username + " stats:");
@@ -83,7 +84,7 @@ namespace MonsterTradingCardsGame.Services
                     Console.WriteLine("Coins: " + user.Stats.Coins);
                     Console.WriteLine("Games Played: " + user.Stats.GamesPlayed);
                     Console.WriteLine("Wins: " + user.Stats.Wins);
-                    Console.WriteLine("Losses: " + user.Stats.Losses);
+                    Console.WriteLine("Losses: " + user.Stats.Losses + "\n");
                 }
 
                 return _users;
@@ -117,7 +118,7 @@ namespace MonsterTradingCardsGame.Services
                 _battleLog += $"Round {roundCount}\n";
                 _battleLog += "************************************************************************************************************************\n\n";
 
-                /*
+                
                 _battleLog += $"{_users[0].Username}'s Deck:\n";
                 foreach (Card card in _users[0].UserDeck.DeckCards)
                 {
@@ -130,7 +131,7 @@ namespace MonsterTradingCardsGame.Services
                     _battleLog += $"Name: {card.Name}, Damage: {card.Damage}\n";
                 }
                 _battleLog += "\n";
-                */
+                
 
                 //  Get random cards for the round
                 Card card1 = _users[0].UserDeck.GetRandomCard();

@@ -493,6 +493,13 @@ namespace MonsterTradingCardsGame.Services.Authentication
                     return new Response(500, "Internal Server Error occured.");
                 }
 
+                int cardCount = cardIds.Count;
+                int maxDeckSize = _cardManagement.GetMaxDeckSize();
+                if (cardIds.Count < maxDeckSize)
+                {
+                    return new Response(409, $"Only a {cardCount} card set. Deck must contain atleast {maxDeckSize} cards.");
+                }
+
                 Guid? userId = GetUserId(connection, token);
                 if (userId == null)
                 {
@@ -523,18 +530,16 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 }
 
                 //  Check if the cards to add are 5 maximum and don't exceed the deck limit
-                int cardCount = cardIds.Count;
                 int deckSize = _cardManagement.GetDeckSize(connection, userId.Value);
                 if (deckSize < 0)
                 {
                     return new Response(500, "Internal Server Error occured.");
                 }
 
-                int maxDeckSize = _cardManagement.GetMaxDeckSize();
                 int combinedCardCount = deckSize + cardCount;
                 if (cardCount > maxDeckSize || combinedCardCount > maxDeckSize)
                 {
-                    Console.WriteLine($"Too many cards, deck can only hold 5 cards {cardCount}");
+                    Console.WriteLine($"Too many cards, deck can only hold {maxDeckSize} cards");
                     return new Response(409, $"Too many cards added: {cardCount}. Deck can only hold up to {maxDeckSize}");
                 }
 
