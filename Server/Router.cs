@@ -1,7 +1,6 @@
 ﻿using MonsterTradingCardsGame.Database;
 using MonsterTradingCardsGame.Models;
 using MonsterTradingCardsGame.Services;
-using MonsterTradingCardsGame.Services.Authentication;
 using Npgsql;
 using System;
 using System.Collections.Generic;

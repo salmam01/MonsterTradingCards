@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace MonsterTradingCardsGame.Services
 {
+    //  Not implemented
     public class TradingManagement
     {
         private readonly DatabaseConnection _dbConnection;
@@ -17,7 +18,5 @@ namespace MonsterTradingCardsGame.Services
             _dbConnection = dbConnection;
             _cardManagement = new();
         }
-
-
     }
 }

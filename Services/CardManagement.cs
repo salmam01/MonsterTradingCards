@@ -212,6 +212,7 @@ namespace MonsterTradingCardsGame.Services
 
                     if(command.ExecuteNonQuery() == 0)
                     {
+                        Console.WriteLine("Error deleting card from stack.");
                         return false;
                     }
                 }
@@ -252,6 +253,7 @@ namespace MonsterTradingCardsGame.Services
 
                     if (command.ExecuteNonQuery() == 0)
                     {
+                        Console.WriteLine("Error adding card to deck.");
                         return false;
                     }
                 }

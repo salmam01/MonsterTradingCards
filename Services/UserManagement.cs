@@ -1,7 +1,6 @@
 ﻿using MonsterTradingCardsGame.Database;
 using MonsterTradingCardsGame.Models;
 using MonsterTradingCardsGame.Server;
-using MonsterTradingCardsGame.Services;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -16,11 +15,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 
-namespace MonsterTradingCardsGame.Services.Authentication
+namespace MonsterTradingCardsGame.Services
 {
     public class UserManagement
     {
-        //private readonly NpgsqlConnection _connection;
         private readonly DatabaseConnection _dbConnection;
         private readonly TokenManagement _tokenManagement;
         private readonly PackageManagement _packageManagement;
@@ -582,7 +580,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
             try
             {
                 using NpgsqlConnection connection = _dbConnection.OpenConnection();
-                if(connection == null || connection.State != ConnectionState.Open)
+                if (connection == null || connection.State != ConnectionState.Open)
                 {
                     Console.WriteLine("Connection to Database failed.");
                     return new Response(500, "Internal Server Error occured.");
@@ -595,7 +593,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
                 }
 
                 string? username = GetUsername(connection, token);
-                if (string.IsNullOrEmpty(username)) 
+                if (string.IsNullOrEmpty(username))
                 {
                     return new Response(500, "Internal Server Error occured.");
                 }
@@ -648,7 +646,7 @@ namespace MonsterTradingCardsGame.Services.Authentication
                             return new Response(500, "Error while updating user stats.");
                         }
 
-                        if(!_cardManagement.UpdateStack(connection, transaction, userId.Value, user.UserDeck))
+                        if (!_cardManagement.UpdateStack(connection, transaction, userId.Value, user.UserDeck))
                         {
                             transaction.Rollback();
                             return new Response(500, "Error while updating stack.");
@@ -659,7 +657,6 @@ namespace MonsterTradingCardsGame.Services.Authentication
                             transaction.Rollback();
                             return new Response(500, "Error while updating deck.");
                         }
-                        Console.WriteLine("Issue here");
                         transaction.Commit();
                     }
                 }
