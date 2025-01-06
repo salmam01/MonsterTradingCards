@@ -646,6 +646,8 @@ namespace MonsterTradingCardsGame.Services
                             return new Response(500, "Error while updating user stats.");
                         }
 
+                        //  Sadly this part of the code is causing issues, not fully functional
+                        /*
                         if (!_cardManagement.UpdateStack(connection, transaction, userId.Value, user.UserDeck))
                         {
                             transaction.Rollback();
@@ -656,7 +658,7 @@ namespace MonsterTradingCardsGame.Services
                         {
                             transaction.Rollback();
                             return new Response(500, "Error while updating deck.");
-                        }
+                        }*/
                         transaction.Commit();
                     }
                 }
