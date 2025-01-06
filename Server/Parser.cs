@@ -25,7 +25,7 @@ namespace MonsterTradingCardsGame.Server
 
         public Request ParseRequest()
         {
-            if (_requestStrLines.Length == 0)
+            if (_requestStrLines.Length == 0 || string.IsNullOrWhiteSpace(_requestStrLines[0]))
             {
                 Console.WriteLine("Malformed Request Syntax.");
                 return _request;

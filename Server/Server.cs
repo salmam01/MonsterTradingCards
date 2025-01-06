@@ -24,7 +24,7 @@ namespace MonsterTradingCardsGame.Server
         private readonly TcpListener _listener;
         private DatabaseConnection _dbConnection;
         private BattleQueue _battleQueue;
-        private bool _isRunning = true;
+        private volatile bool _isRunning = true;
         private const int _shopId = 1;
 
         public Server(string url)
@@ -78,10 +78,6 @@ namespace MonsterTradingCardsGame.Server
             catch (SocketException e)
             {
                 Console.WriteLine($"SocketException: {e}");
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine($"Failed to connect to Database: {e.Message}");
             }
             catch (Exception e)
             {

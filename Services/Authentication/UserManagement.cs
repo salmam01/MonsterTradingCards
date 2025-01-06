@@ -643,14 +643,12 @@ namespace MonsterTradingCardsGame.Services.Authentication
                             return new Response(500, "Error while updating user stats.");
                         }
 
-                        Console.WriteLine("Working here");
                         if(!_cardManagement.UpdateStack(connection, transaction, userId.Value, user.UserDeck))
                         {
                             transaction.Rollback();
                             return new Response(500, "Error while updating stack.");
                         }
 
-                        Console.WriteLine("Working here too");
                         if (!_cardManagement.UpdateDeck(connection, transaction, userId.Value, user.UserDeck))
                         {
                             transaction.Rollback();

@@ -202,7 +202,7 @@ namespace MonsterTradingCardsGame.Services
 
         public bool UpdateStack(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserDeck deck)
         {
-            if(deck.DeletedCards != null && deck.DeletedCards.Count != 0)
+            if(deck.DeletedCards != null && deck.DeletedCards.Count > 0)
             {
                 foreach(Card deletedCard in deck.DeletedCards)
                 {
@@ -212,14 +212,12 @@ namespace MonsterTradingCardsGame.Services
 
                     if(command.ExecuteNonQuery() == 0)
                     {
-                        Console.WriteLine("Bish");
                         return false;
                     }
                 }
             }
 
-            Console.WriteLine("Here no come");
-            if (deck.AddedCards != null && deck.AddedCards.Count != 0)
+            if (deck.AddedCards != null && deck.AddedCards.Count > 0)
             {
                 foreach (Card addedCard in deck.AddedCards)
                 {
@@ -229,6 +227,7 @@ namespace MonsterTradingCardsGame.Services
 
                     if (command.ExecuteNonQuery() == 0)
                     {
+                        Console.WriteLine("Error adding card to stack.");
                         return false;
                     }
                 }
@@ -238,7 +237,7 @@ namespace MonsterTradingCardsGame.Services
 
         public bool UpdateDeck(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId, UserDeck deck)
         {
-            if(deck.AddedCards != null || deck.AddedCards.Count != 0)
+            if(deck.AddedCards != null && deck.AddedCards.Count > 0)
             {
                 foreach (Card card in deck.AddedCards)
                 {

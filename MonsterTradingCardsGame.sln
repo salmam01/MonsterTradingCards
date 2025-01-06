@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35303.130
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonsterTradingCardsGame", "MonsterTradingCardsGame.csproj", "{A5186C3F-10FC-4100-84C0-71BFC5438CCE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MTCG.nUnitTests", "..\MTCG.nUnitTests\MTCG.nUnitTests.csproj", "{2E6C7A3C-ADD4-4BA3-8316-9EDF47ED7530}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{A5186C3F-10FC-4100-84C0-71BFC5438CCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5186C3F-10FC-4100-84C0-71BFC5438CCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5186C3F-10FC-4100-84C0-71BFC5438CCE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E6C7A3C-ADD4-4BA3-8316-9EDF47ED7530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E6C7A3C-ADD4-4BA3-8316-9EDF47ED7530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E6C7A3C-ADD4-4BA3-8316-9EDF47ED7530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E6C7A3C-ADD4-4BA3-8316-9EDF47ED7530}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -53,7 +53,7 @@ namespace MonsterTradingCardsGame.Services
                 switch(battleResult)
                 {
                     case 0:
-                        _battleLog += "Draw.";
+                        _battleLog += "Draw. Everyone keeps their cards!\n";
                         Console.WriteLine(_battleLog);
                         return new List<User>();
 
@@ -76,6 +76,16 @@ namespace MonsterTradingCardsGame.Services
                 }
 
                 Console.Write(_battleLog);
+                foreach (User user in _users)
+                {
+                    Console.WriteLine(user.Username + " stats:");
+                    Console.WriteLine("Elo: " + user.Stats.Elo);
+                    Console.WriteLine("Coins: " + user.Stats.Coins);
+                    Console.WriteLine("Games Played: " + user.Stats.GamesPlayed);
+                    Console.WriteLine("Wins: " + user.Stats.Wins);
+                    Console.WriteLine("Losses: " + user.Stats.Losses);
+                }
+
                 return _users;
             }
             catch (Exception e)
@@ -107,6 +117,7 @@ namespace MonsterTradingCardsGame.Services
                 _battleLog += $"Round {roundCount}\n";
                 _battleLog += "************************************************************************************************************************\n\n";
 
+                /*
                 _battleLog += $"{_users[0].Username}'s Deck:\n";
                 foreach (Card card in _users[0].UserDeck.DeckCards)
                 {
@@ -119,6 +130,7 @@ namespace MonsterTradingCardsGame.Services
                     _battleLog += $"Name: {card.Name}, Damage: {card.Damage}\n";
                 }
                 _battleLog += "\n";
+                */
 
                 //  Get random cards for the round
                 Card card1 = _users[0].UserDeck.GetRandomCard();
@@ -155,14 +167,13 @@ namespace MonsterTradingCardsGame.Services
                         _battleLog += $"{_users[1].Username} takes over {_users[0].Username}'s card {card1.Name}.\n";
                         break;
 
-                    //  Error
                     default:
-                        Console.WriteLine($"An error occurred during battle.");
+                        _battleLog += "An error occurred during battle.\n";
                         return -1;
                 }
                 roundCount++;
             }
-            return -1;
+            return 0;
         }
 
         public int BattleLogic(Card card1, Card card2)
@@ -183,7 +194,7 @@ namespace MonsterTradingCardsGame.Services
                 _battleLog += $"{card1.Name} is of type {type1}\n";
                 _battleLog += $"{card2.Name} is of type {type2}\n";
                 _battleLog += "Fight!\n";
-                return MonsterSpellFight(card1, card2);
+                return MonsterAndSpellFight(card1, card2);
             }
 
             _battleLog += "Error: Cards have no type.\n";
@@ -221,17 +232,23 @@ namespace MonsterTradingCardsGame.Services
                     _battleLog += $"{card2.Name} controlled {card1.Name} to not attack!\n";
                 }
 
+                if (speciality1 == 'W' && card1.Element == 'F' && speciality2 == 'D')
+                {
+                    damage2 = 0;
+                    _battleLog += $"{card1.Name} evaded {card2.Name}'s attack!";
+                }
+                if (speciality2 == 'W' && card2.Element == 'F' && speciality1 == 'D')
+                {
+                    damage1 = 0;
+                    _battleLog += $"{card2.Name} evaded {card1.Name}'s attack!";
+                }
+
                 return Fight(card1, card2, damage1, damage2);
             }
             return -1;
         }
 
-        /*
-        Missing:
-        • The armor of Knights is so heavy that WaterSpells make them drown them instantly. 
-        • The FireElves know Dragons since they were little and can evade their attacks. 
-        */
-        public int MonsterSpellFight(Card card1, Card card2)
+        public int MonsterAndSpellFight(Card card1, Card card2)
         {
             char element1 = card1.Element;
             char element2 = card2.Element;
@@ -257,6 +274,20 @@ namespace MonsterTradingCardsGame.Services
                     damage2 = 0;
                     return Fight(card1, card2, damage1, damage2);
                 }
+            }
+
+            //  Knight drowning
+            if (card1.Speciality == 'N' && element2 == 'W')
+            {
+                _battleLog += $"The {card1.Name} drowned instantly because of his heavy armor!";
+                damage1 = 0;
+                return Fight(card1, card2, damage1, damage2);
+            }
+            if (card1.Speciality == 'W' && element2 == 'N')
+            {
+                _battleLog += $"The {card2.Name} drowned instantly because of his heavy armor!";
+                damage2 = 0;
+                return Fight(card1, card2, damage1, damage2);
             }
 
             //  Normal fight
